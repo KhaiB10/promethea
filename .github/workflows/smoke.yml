@@ -1,0 +1,36 @@
+name: smoke
+
+# Builds the Docker image and confirms imports work.
+# Does NOT run the full hello_reactor (would need to download 4 GB of cross sections).
+# A nightly job with the XS cached can run the real simulation later.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t promethea:ci .
+      - name: Verify OpenMC import
+        run: |
+          docker run --rm promethea:ci python -c "
+          import openmc, sys
+          print('OpenMC version:', openmc.__version__)
+          # Build geometry without running — proves bindings work
+          m = openmc.Material(); m.add_nuclide('U235', 1.0); m.set_density('g/cm3', 19.0)
+          print('Material build OK')
+          sys.exit(0)
+          "
+      - name: Verify Python imports
+        run: |
+          docker run --rm promethea:ci python -c "
+          import numpy, scipy, matplotlib, pandas, h5py, gymnasium
+          print('All core imports OK')
+          "
