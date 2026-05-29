@@ -207,6 +207,46 @@ def build_control_bushing() -> openmc.Material:
     return bushing
 
 
+def build_lower_head_mix(temperature_K: float = BENCHMARK_TEMP_K,
+                         salt_vol_frac: float = 0.908,
+                         inor_vol_frac: float = 0.092) -> openmc.Material:
+    """
+    Homogenized lower-head region: fuel salt + INOR-8 grid support plates and
+    anti-swirl vanes.
+
+    Default 90.8 % salt / 9.2 % INOR-8 by volume matches the original IRPhE
+    CSG model (Shen et al. 2021), which was derived from a 20-region
+    diffusion model used during MSRE operations (Haubenreich et al., 1965).
+
+    The Yilmaz 2024 CAD-vs-CSG paper notes that the as-built INOR-8 volume
+    fraction is closer to 15 %, and that lifting the value to 15 % reduces
+    k-eff by "more than 100 pcm." We keep 9.2 % as the benchmark default and
+    expose the volume fractions as kwargs so the 15 % variant can be tested
+    directly.
+
+    Sources
+    -------
+    - Yilmaz et al. 2024, Frontiers in Nuclear Engineering, Sec. 2.3.2.
+    - Haubenreich et al. 1965, ORNL-TM-1018.
+    - Shen et al. 2021, IRPhE MSRE-MSR-EXP-001 benchmark.
+    """
+    if abs((salt_vol_frac + inor_vol_frac) - 1.0) > 1e-6:
+        raise ValueError("lower-head volume fractions must sum to 1")
+
+    base_salt = build_fuel_salt_irphe(temperature_K)
+    base_inor = build_inor8(temperature_K)
+    mix = openmc.Material.mix_materials(
+        [base_salt, base_inor],
+        [salt_vol_frac, inor_vol_frac],
+        "vo",
+    )
+    mix.name = (f"MSRE lower-head mix "
+                f"({salt_vol_frac*100:.1f}% salt / "
+                f"{inor_vol_frac*100:.1f}% INOR-8)")
+    mix.temperature = temperature_K
+    return mix
+
+
 def build_inconel600(temperature_K: float = ROOM_TEMP_K + 65.6) -> openmc.Material:
     """Inconel-600 cladding for the control rods (operates near room temp)."""
     m = openmc.Material(name="Inconel-600")
@@ -303,6 +343,7 @@ def build_all(temperature_K: float = BENCHMARK_TEMP_K, *, irphe: bool = False):
         "helium":   build_helium(temperature_K),
         "bushing":  build_control_bushing(),
         "inconel":  build_inconel600(),
+        "lower_head_mix": build_lower_head_mix(temperature_K),
     }
     return mats, openmc.Materials(list(mats.values()))
 

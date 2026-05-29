@@ -60,6 +60,7 @@ from geometry import build_geometry, ACTIVE_CORE_HEIGHT, CORE_RADIUS  # noqa: E4
 from geometry_het import (                                    # noqa: E402
     build_geometry_het,
     build_geometry_het_clipped,
+    build_geometry_het_lh,
     ACTIVE_CORE_HEIGHT_HET,
     CORE_RADIUS_HET,
 )
@@ -70,11 +71,12 @@ ENVELOPE = {
     "homog":       (1.00, 1.15, "homogenized v0"),
     "het":         (0.98, 1.05, "heterogeneous v1 (rods withdrawn, IRPhE salt)"),
     "het_clipped": (0.98, 1.05, "heterogeneous v1c (edge stringers clipped at core cylinder)"),
+    "het_lh":      (0.98, 1.10, "heterogeneous v1c + lower-head mix 90.8/9.2 (Phase 1.1.c step 1)"),
 }
 
 
 def build_model(quick: bool = False, mode: str = "homog") -> openmc.Model:
-    irphe = mode in ("het", "het_clipped")
+    irphe = mode in ("het", "het_clipped", "het_lh")
     mats_dict, mats = build_all(temperature_K=BENCHMARK_TEMP_K, irphe=irphe)
 
     if mode == "het":
@@ -83,6 +85,10 @@ def build_model(quick: bool = False, mode: str = "homog") -> openmc.Model:
         active_h    = ACTIVE_CORE_HEIGHT_HET
     elif mode == "het_clipped":
         geometry, extra_mats = build_geometry_het_clipped(mats_dict)
+        core_radius = CORE_RADIUS_HET
+        active_h    = ACTIVE_CORE_HEIGHT_HET
+    elif mode == "het_lh":
+        geometry, extra_mats = build_geometry_het_lh(mats_dict)
         core_radius = CORE_RADIUS_HET
         active_h    = ACTIVE_CORE_HEIGHT_HET
     else:
@@ -140,12 +146,16 @@ def main():
                         help="Use heterogeneous lattice geometry + IRPhE salt.")
     parser.add_argument("--het-clipped", action="store_true",
                         help="Heterogeneous geometry with edge stringers clipped at core cylinder.")
+    parser.add_argument("--het-lh", action="store_true",
+                        help="Clipped het geometry + lower-head 90.8/9.2 mix (Phase 1.1.c step 1).")
     args = parser.parse_args()
 
     # Allow CI to pick mode without code edits.
     env_mode = os.environ.get("PROMETHEA_MODE", "").lower()
-    if env_mode in ("het", "het_clipped", "homog"):
+    if env_mode in ("het", "het_clipped", "het_lh", "homog"):
         mode = env_mode
+    elif args.het_lh:
+        mode = "het_lh"
     elif args.het_clipped:
         mode = "het_clipped"
     elif args.het:
