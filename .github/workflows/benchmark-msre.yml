@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Geometry mode: homog (v0), het (v1), het_clipped (v1c), or het_lh (1.1.c step 1: + lower-head mix)"
+        description: "Geometry mode: homog, het, het_clipped, het_lh (1.1.c step 1), het_can (1.1.c step 2)"
         required: false
         default: "homog"
         type: choice
@@ -29,6 +29,7 @@ on:
           - het
           - het_clipped
           - het_lh
+          - het_can
       particles:
         description: "Particles per batch (default 50000; reduce to 10000 for a fast smoke run)"
         required: false
