@@ -68,10 +68,17 @@ jobs:
         if: steps.xs-cache.outputs.cache-hit != 'true'
         run: bash scripts/fetch_xs.sh
 
-      - name: Confirm cross-sections present
+      - name: Confirm cross-sections present and make them container-readable
         run: |
           ls -lh data/xs/endfb-viii.0-hdf5/cross_sections.xml
           echo "XS dir size: $(du -sh data/xs | cut -f1)"
+          # The Docker container runs as mambauser (non-root). Ensure the
+          # mounted XS tree is world-readable and dirs are world-executable.
+          sudo chmod -R a+rX data/xs
+          # Also ensure the working tree is writeable so OpenMC can write
+          # statepoint files back to the host through the bind mount.
+          mkdir -p sims/openmc out
+          sudo chmod -R a+rwX sims out
 
       # ---- 2. Build Docker image (with layer cache) -----------------------
       - name: Set up Docker Buildx
@@ -101,6 +108,7 @@ jobs:
             -e PROMETHEA_PARTICLES=$PARTICLES \
             -e PROMETHEA_BATCHES=$BATCHES \
             -e PROMETHEA_MODE=$MODE \
+            -e HOME=/tmp \
             -w /workspace \
             promethea:ci \
             python benchmarks/msre/run_criticality.py 2>&1 | tee out/msre_run.log
