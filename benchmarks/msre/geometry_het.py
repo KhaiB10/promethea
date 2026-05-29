@@ -179,9 +179,7 @@ def build_geometry_het(mats: Dict[str, openmc.Material]):
     # --- Surfaces ---
     half_h = ACTIVE_CORE_HEIGHT / 2.0
 
-    # Lattice region: a cylinder of radius CORE_RADIUS, height ACTIVE_CORE_HEIGHT,
-    # centered at z = 0.
-    core_outer = openmc.ZCylinder(r=CORE_RADIUS, name="core_lattice_outer")
+    # Axial bounds of the active core (graphite + lattice region).
     core_bot   = openmc.ZPlane(-half_h, name="active_core_bottom")
     core_top   = openmc.ZPlane(+half_h, name="active_core_top")
 
@@ -195,31 +193,24 @@ def build_geometry_het(mats: Dict[str, openmc.Material]):
                                  name="vessel_top",    boundary_type="vacuum")
 
     # --- Lattice cell ---
+    #
+    # The lattice is placed inside a single cylindrical cell that spans the
+    # full vessel ID radius and the active-core height. The lattice itself
+    # has lattice.outer = salt_uni, so any track that exits the rectangular
+    # lattice extent (but stays inside the vessel cylinder) finds pure salt
+    # without ambiguity.
+    #
+    # This avoids the lost-particle issue we hit when the lattice cell was
+    # bounded by a rectangle (lat_x/y planes) and a separate salt-annulus
+    # cell tried to fill the corners between the rectangle and the vessel
+    # cylinder. The corner geometry created surface ambiguity that lost
+    # particles at the lat_x/y planes.
     lattice = _build_core_lattice(mats)
-    # The lattice must be enclosed in its own bounding cell to be placed.
-    lat_extent = (lattice.lower_left[0], lattice.lower_left[1])
-    n_cells_per_side = len(lattice.universes)
-    lat_x_min = openmc.XPlane(lat_extent[0])
-    lat_x_max = openmc.XPlane(lat_extent[0] + n_cells_per_side * STRINGER_PITCH)
-    lat_y_min = openmc.YPlane(lat_extent[1])
-    lat_y_max = openmc.YPlane(lat_extent[1] + n_cells_per_side * STRINGER_PITCH)
 
     lattice_cell = openmc.Cell(
         name="core_lattice_cell",
         fill=lattice,
-        region=(+lat_x_min & -lat_x_max & +lat_y_min & -lat_y_max
-                & +core_bot & -core_top),
-    )
-
-    # Salt outside the lattice but still inside the vessel ID, within the
-    # active-core axial extent (this is the annular gap between the
-    # square lattice envelope and the cylindrical vessel ID).
-    salt_annulus_cell = openmc.Cell(
-        name="core_salt_annulus",
-        fill=mats["salt"],
-        region=(-vessel_inner
-                & ~(+lat_x_min & -lat_x_max & +lat_y_min & -lat_y_max)
-                & +core_bot & -core_top),
+        region=(-vessel_inner & +core_bot & -core_top),
     )
 
     # Upper plenum (fuel salt).
@@ -243,7 +234,7 @@ def build_geometry_het(mats: Dict[str, openmc.Material]):
     )
 
     root = openmc.Universe(cells=[
-        lattice_cell, salt_annulus_cell,
+        lattice_cell,
         upper_plenum, lower_plenum, vessel_wall,
     ])
     return openmc.Geometry(root), []
