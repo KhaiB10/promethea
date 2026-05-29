@@ -52,8 +52,20 @@ import openmc
 
 STRINGER_PITCH      = 5.08          # 2 inches square lattice pitch
 STRINGER_SIDE       = 5.08          # stringer is also 2 inches square
-FUEL_CHANNEL_WIDTH  = 1.016         # half-groove width on each face
-FUEL_CHANNEL_DEPTH  = 3.048 / 2.0   # half-groove depth (1.524 cm into each stringer)
+# Half-channel cut into each face of every stringer.
+# TM-0728 §2.6 (Robertson 1965): "Four half-channels 0.2- by 1.2-in. in each
+# 2- by 2-in. graphite block." Shen et al. 2021: full channels formed between
+# paired faces are 1.016 cm by 3.048 cm.
+#
+# Geometric meaning of each dimension on a single half-channel:
+#   - depth INTO stringer (perpendicular to face) = 0.2 in = 0.508 cm
+#   - length ALONG face   (parallel to face)      = 1.2 in = 3.048 cm
+#
+# Two facing half-channels combine into one full channel 1.016 cm wide
+# (= 2 × 0.508) and 3.048 cm long. Sharp-corner fuel fraction:
+#   4 × (0.508 × 3.048) / 5.08² = 6.194 / 25.806 = 0.240 ✓ (TM-0728 §2.6)
+FUEL_CHANNEL_DEPTH  = 0.508         # half-groove depth into stringer (0.2 in)
+FUEL_CHANNEL_LENGTH = 3.048         # half-groove length along face   (1.2 in)
 
 ACTIVE_CORE_HEIGHT  = 166.446       # IRPhE graphite-active height
 CORE_RADIUS         = 70.168        # IRPhE active-core equivalent radius
@@ -135,30 +147,35 @@ def _build_stringer_universe(mats: Dict[str, openmc.Material]) -> openmc.Univers
     graphite = mats["graphite"]
     salt     = mats["salt"]
 
-    half_pitch = STRINGER_PITCH / 2.0     # 2.54
-    half_chan  = FUEL_CHANNEL_WIDTH / 2.0  # 0.508
-    notch_depth = FUEL_CHANNEL_DEPTH       # 1.524 into the stringer
+    half_pitch = STRINGER_PITCH / 2.0       # 2.540
+    notch_depth = FUEL_CHANNEL_DEPTH        # 0.508 into the stringer
+    half_length = FUEL_CHANNEL_LENGTH / 2.0 # 1.524 along the face
 
     # Four notch surfaces, one per face.
-    # +X face (right)
+    # Each notch is `notch_depth` deep INTO the stringer (perpendicular to
+    # the face) and `2*half_length` long ALONG the face (parallel to it).
+    #
+    # +X face (right): the notch is the strip of x near the right face,
+    #                  centered on y=0.
     x_in_R  = openmc.XPlane(half_pitch - notch_depth)
-    y_lo_R  = openmc.YPlane(-half_chan)
-    y_hi_R  = openmc.YPlane(+half_chan)
-    notch_R = +x_in_R & +y_lo_R & -y_hi_R
+    y_lo_x  = openmc.YPlane(-half_length)
+    y_hi_x  = openmc.YPlane(+half_length)
+    notch_R = +x_in_R & +y_lo_x & -y_hi_x
 
-    # -X face (left)
+    # -X face (left): mirror of +X face about x=0.
     x_in_L  = openmc.XPlane(-half_pitch + notch_depth)
-    notch_L = -x_in_L & +y_lo_R & -y_hi_R
+    notch_L = -x_in_L & +y_lo_x & -y_hi_x
 
-    # +Y face (top in 2D)
+    # +Y face (top in 2D): notch is the strip of y near the top face,
+    #                      centered on x=0.
     y_in_T  = openmc.YPlane(half_pitch - notch_depth)
-    x_lo_T  = openmc.XPlane(-half_chan)
-    x_hi_T  = openmc.XPlane(+half_chan)
-    notch_T = +y_in_T & +x_lo_T & -x_hi_T
+    x_lo_y  = openmc.XPlane(-half_length)
+    x_hi_y  = openmc.XPlane(+half_length)
+    notch_T = +y_in_T & +x_lo_y & -x_hi_y
 
-    # -Y face (bottom in 2D)
+    # -Y face (bottom in 2D): mirror of +Y face about y=0.
     y_in_B  = openmc.YPlane(-half_pitch + notch_depth)
-    notch_B = -y_in_B & +x_lo_T & -x_hi_T
+    notch_B = -y_in_B & +x_lo_y & -x_hi_y
 
     salt_region = notch_R | notch_L | notch_T | notch_B
 
