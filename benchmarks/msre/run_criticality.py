@@ -60,6 +60,19 @@ def build_model(quick: bool = False) -> openmc.Model:
         settings.inactive = 30
         settings.particles = 50_000
 
+    # CI / env overrides — let the GitHub Actions workflow scale runs
+    # without code edits. Inactive batches scale with total batches.
+    env_batches = os.environ.get("PROMETHEA_BATCHES")
+    env_particles = os.environ.get("PROMETHEA_PARTICLES")
+    if env_batches:
+        b = int(env_batches)
+        settings.batches = b
+        settings.inactive = max(10, b // 4)
+    if env_particles:
+        settings.particles = int(env_particles)
+    print(f"[msre_v0] settings: batches={settings.batches} "
+          f"inactive={settings.inactive} particles={settings.particles}")
+
     # Initial source — a thin slab through the middle of the active core,
     # restricted to fissionable material to get a fast initial guess.
     src_box = openmc.stats.Box(

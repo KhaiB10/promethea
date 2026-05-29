@@ -1,0 +1,136 @@
+name: benchmark-msre
+
+# Runs the MSRE homogenized v0 criticality benchmark in CI.
+#
+# Strategy
+#   1. Cache the ENDF/B-VIII.0 cross-section archive (~4 GB) so we only
+#      download it once per cache lifetime (GitHub keeps caches for 7 days
+#      after last use, max 10 GB per repo).
+#   2. Build the Docker image (also cached via GHA's build cache).
+#   3. Run benchmarks/msre/run_criticality.py inside the container.
+#   4. Surface k-eff in the workflow summary so it's readable from a phone.
+#
+# Runtime expectations on the free ubuntu-latest runner (4 vCPU / 16 GB):
+#   - First run (cold cache):  ~45-75 min  (XS download dominates)
+#   - Warm runs:               ~20-35 min
+#
+# Triggered manually OR on changes to MSRE benchmark code.
+
+on:
+  workflow_dispatch:
+    inputs:
+      particles:
+        description: "Particles per batch (default 50000; reduce to 10000 for a fast smoke run)"
+        required: false
+        default: "50000"
+      batches:
+        description: "Total batches (default 120)"
+        required: false
+        default: "120"
+  push:
+    paths:
+      - "benchmarks/msre/**"
+      - "Dockerfile"
+      - "environment.yml"
+      - ".github/workflows/benchmark-msre.yml"
+
+# Cancel superseded runs to save minutes.
+concurrency:
+  group: msre-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  msre-v0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- 1. Restore cross-section cache --------------------------------
+      - name: Cache ENDF/B-VIII.0 cross-sections
+        id: xs-cache
+        uses: actions/cache@v4
+        with:
+          path: data/xs
+          # Bump the version suffix to invalidate the cache.
+          key: endfb-viii.0-hdf5-v1
+
+      - name: Fetch cross-sections (if cache miss)
+        if: steps.xs-cache.outputs.cache-hit != 'true'
+        run: bash scripts/fetch_xs.sh
+
+      - name: Confirm cross-sections present
+        run: |
+          ls -lh data/xs/endfb-viii.0-hdf5/cross_sections.xml
+          echo "XS dir size: $(du -sh data/xs | cut -f1)"
+
+      # ---- 2. Build Docker image (with layer cache) -----------------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Promethea image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: promethea:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ---- 3. Run the MSRE benchmark --------------------------------------
+      - name: Run MSRE homogenized v0
+        id: run
+        env:
+          PARTICLES: ${{ github.event.inputs.particles || '50000' }}
+          BATCHES: ${{ github.event.inputs.batches || '120' }}
+        run: |
+          mkdir -p out
+          docker run --rm \
+            -v $PWD:/workspace \
+            -e OPENMC_CROSS_SECTIONS=/workspace/data/xs/endfb-viii.0-hdf5/cross_sections.xml \
+            -e PROMETHEA_PARTICLES=$PARTICLES \
+            -e PROMETHEA_BATCHES=$BATCHES \
+            -w /workspace \
+            promethea:ci \
+            python benchmarks/msre/run_criticality.py 2>&1 | tee out/msre_run.log
+
+      # ---- 4. Surface results in the GitHub UI ----------------------------
+      - name: Extract k-eff and write summary
+        if: always()
+        run: |
+          {
+            echo "## MSRE homogenized v0 — results"
+            echo ""
+            echo "**Commit:** \`${GITHUB_SHA:0:7}\`"
+            echo "**Particles/batch:** ${{ github.event.inputs.particles || '50000' }}"
+            echo "**Batches:** ${{ github.event.inputs.batches || '120' }}"
+            echo ""
+            echo "### k-eff"
+            echo '```'
+            grep -E "(k-eff|k-effective|PASS|FAIL|Final k|combined)" out/msre_run.log | tail -20 || echo "(no k-eff lines found — see artifact)"
+            echo '```'
+            echo ""
+            echo "### Tail of run log"
+            echo '```'
+            tail -40 out/msre_run.log
+            echo '```'
+            echo ""
+            echo "### Acceptance envelope"
+            echo "- v0 (homogenized) target: \`1.00 <= k <= 1.15\`"
+            echo "- Heterogeneous CSG target (future): \`k ~ 1.020\`"
+            echo "- IRPhE experimental: \`k = 0.99978\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msre-v0-run-${{ github.run_number }}
+          path: |
+            out/
+            statepoint.*.h5
+            tallies.out
+            summary.h5
+          if-no-files-found: warn
+          retention-days: 30

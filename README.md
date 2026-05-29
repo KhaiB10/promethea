@@ -54,6 +54,13 @@ This repo is the source of truth. Every design decision, simulation input deck, 
 - **Pull requests welcome** — see [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Build log:** posted to the project blog and YouTube channel (links coming)
 
+## Run it without a workstation
+
+You don't need a Linux box to reproduce Promethea results.
+
+- **GitHub Codespaces.** Click `Code → Codespaces → Create codespace on main`. The container builds OpenMC + the scientific stack automatically. Then in the terminal: `bash scripts/fetch_xs.sh` (one-time, ~4 GB), `python scripts/hello_reactor.py` (smoke test), `python benchmarks/msre/run_criticality.py` (full MSRE v0). Free tier covers it.
+- **GitHub Actions.** The [`benchmark-msre`](.github/workflows/benchmark-msre.yml) workflow runs the full MSRE criticality benchmark on every push to `benchmarks/msre/**`, and can be triggered manually from the Actions tab with custom particle/batch counts. k-eff and PASS/REVIEW status are written to the run summary.
+
 ## What this is *not*
 
 - This is not a real reactor. It is a simulation and engineering study.
