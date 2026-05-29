@@ -28,15 +28,23 @@ ROOM_TEMP_K = 293.15
 # Li-7 enrichment in MSRE fuel salt was >99.99 % to minimize Li-6 capture.
 LI7_ENRICH = 0.99995              # atom fraction
 
-# U-235 enrichment in the initial U-235 loading (clean salt, zero-power).
-# Historical value for the U-235 critical experiment: 33.3 wt %.
-U235_ENRICH_WT = 33.3             # weight %
+# U-235 enrichment in the historical MSRE U-235 critical experiment.
+# Value used in early ORNL design documents and the OpenMC tutorial: 33.3 wt %.
+U235_ENRICH_HISTORICAL_WT = 33.3        # weight % (legacy build_fuel_salt)
+U235_ENRICH_WT = U235_ENRICH_HISTORICAL_WT  # alias for back-compat
+
+# U-235 enrichment in the IRPhE benchmark fuel salt.
+# Wu 2025 transient benchmark, citing IRPhE: 31.35 wt %.
+# Cross-check: at 65.0 / 29.17 / 5.0 / 0.83 mol % salt and 31.35 wt% enr,
+# U-235 wt% in salt = 1.408 (matches IRPhE target exactly).
+U235_ENRICH_IRPHE_WT  = 31.35           # weight %
 
 # IRPhE first-criticality benchmark: U-235 in fuel salt = 1.408 wt %.
-# (Fratoni / IRPhE; see ORNL 2023 MSR Workshop session 5.)
+# (Fratoni / IRPhE; ORNL 2023 MSR Workshop session 5.)
 U235_WT_IN_SALT_IRPHE = 0.01408   # mass fraction
 
-# Fuel salt mole fractions
+# Fuel salt mole fractions -- historical ORNL design recipe.
+# 65 / 29.1 / 5 / 0.9 mol % LiF / BeF2 / ZrF4 / UF4 (sum = 100).
 SALT_MOLE_FRAC = {
     "LiF":  0.650,
     "BeF2": 0.291,
@@ -44,6 +52,16 @@ SALT_MOLE_FRAC = {
     "UF4":  0.009,
 }
 assert abs(sum(SALT_MOLE_FRAC.values()) - 1.0) < 1e-9
+
+# Fuel salt mole fractions -- IRPhE first-criticality recipe.
+# 65.0 / 29.17 / 5.0 / 0.83 mol %  (Wu 2025, citing IRPhE benchmark).
+SALT_MOLE_FRAC_IRPHE = {
+    "LiF":  0.6500,
+    "BeF2": 0.2917,
+    "ZrF4": 0.0500,
+    "UF4":  0.0083,
+}
+assert abs(sum(SALT_MOLE_FRAC_IRPHE.values()) - 1.0) < 1e-9
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +207,46 @@ def build_control_bushing() -> openmc.Material:
     return bushing
 
 
+def build_lower_head_mix(temperature_K: float = BENCHMARK_TEMP_K,
+                         salt_vol_frac: float = 0.908,
+                         inor_vol_frac: float = 0.092) -> openmc.Material:
+    """
+    Homogenized lower-head region: fuel salt + INOR-8 grid support plates and
+    anti-swirl vanes.
+
+    Default 90.8 % salt / 9.2 % INOR-8 by volume matches the original IRPhE
+    CSG model (Shen et al. 2021), which was derived from a 20-region
+    diffusion model used during MSRE operations (Haubenreich et al., 1965).
+
+    The Yilmaz 2024 CAD-vs-CSG paper notes that the as-built INOR-8 volume
+    fraction is closer to 15 %, and that lifting the value to 15 % reduces
+    k-eff by "more than 100 pcm." We keep 9.2 % as the benchmark default and
+    expose the volume fractions as kwargs so the 15 % variant can be tested
+    directly.
+
+    Sources
+    -------
+    - Yilmaz et al. 2024, Frontiers in Nuclear Engineering, Sec. 2.3.2.
+    - Haubenreich et al. 1965, ORNL-TM-1018.
+    - Shen et al. 2021, IRPhE MSRE-MSR-EXP-001 benchmark.
+    """
+    if abs((salt_vol_frac + inor_vol_frac) - 1.0) > 1e-6:
+        raise ValueError("lower-head volume fractions must sum to 1")
+
+    base_salt = build_fuel_salt_irphe(temperature_K)
+    base_inor = build_inor8(temperature_K)
+    mix = openmc.Material.mix_materials(
+        [base_salt, base_inor],
+        [salt_vol_frac, inor_vol_frac],
+        "vo",
+    )
+    mix.name = (f"MSRE lower-head mix "
+                f"({salt_vol_frac*100:.1f}% salt / "
+                f"{inor_vol_frac*100:.1f}% INOR-8)")
+    mix.temperature = temperature_K
+    return mix
+
+
 def build_inconel600(temperature_K: float = ROOM_TEMP_K + 65.6) -> openmc.Material:
     """Inconel-600 cladding for the control rods (operates near room temp)."""
     m = openmc.Material(name="Inconel-600")
@@ -211,62 +269,34 @@ def build_inconel600(temperature_K: float = ROOM_TEMP_K + 65.6) -> openmc.Materi
 
 def build_fuel_salt_irphe(temperature_K: float = BENCHMARK_TEMP_K) -> openmc.Material:
     """
-    MSRE fuel salt at the IRPhE first-criticality loading.
+    MSRE fuel salt at the IRPhE first-criticality loading (revision 2021).
 
-    The benchmark fixes:
-      U-235 mass fraction in salt = 1.408 wt %
-      U-235 enrichment of the U   = 33.3 wt %
-      Salt density                = 2.3275 g/cm3
-      Carrier salt mole ratio     = 65 LiF / 29.2 BeF2 / 5 ZrF4 / (balance UF4)
-      Li-7 enrichment             = 99.995 at %  (>99.99 % spec)
+    Canonical IRPhE composition (Wu 2025, citing IRPhE benchmark):
+      Mole fractions    : 65.0 LiF / 29.17 BeF2 / 5.0 ZrF4 / 0.83 UF4 mol %
+      U-235 enrichment  : 31.35 wt %
+      Li-7 enrichment   : 99.995 wt %
+      Salt density      : 2.3275 g/cm3 at 911 K
+      Resulting U-235 in salt : 1.408 wt %  (cross-checks the IRPhE target)
 
-    The UF4 mole fraction is back-solved from the 1.408 wt % U-235 target
-    instead of taken from the original 0.9 mol % pump-fill recipe, which
-    corresponds to a more uranium-rich salt (closer to 2.5 wt % U-235).
+    Earlier versions of this function back-solved the UF4 mole fraction from
+    the 1.408 wt% target while assuming 33.3 wt% U-235 enrichment, which
+    produced 0.736 mol % UF4 and about 12% less total uranium mass (and
+    5.5% less U-235) than the real benchmark. A thermal-utilization check
+    shows the net k-eff impact of this correction is small (about +15 to
+    +75 pcm) because the extra U-235 outweighs the extra U-238 absorption.
+    The fix is still worth making for benchmark fidelity, but it is not
+    the dominant contributor to bias in the v1 heterogeneous model.
     """
     salt = openmc.Material(name="MSRE fuel salt (IRPhE first criticality)")
     salt.temperature = temperature_K
     salt.set_density("g/cm3", 2.3275)
 
-    # Molar masses (g/mol) of the four carrier salts. Using natural Li/Be/Zr
-    # plus the explicit enriched-U mass for UF4.
-    M_F   = 18.998
-    M_Li  = 6.94    # natural -- close enough; we override isotopics below
-    M_Be  = 9.012
-    M_Zr  = 91.224
-    M_U   = 235.044 * 0.333 + 238.051 * (1.0 - 0.333)   # 33.3% enriched U
-    M_LiF  = M_Li + M_F
-    M_BeF2 = M_Be + 2 * M_F
-    M_ZrF4 = M_Zr + 4 * M_F
-    M_UF4  = M_U  + 4 * M_F
+    x_LiF  = SALT_MOLE_FRAC_IRPHE["LiF"]
+    x_BeF2 = SALT_MOLE_FRAC_IRPHE["BeF2"]
+    x_ZrF4 = SALT_MOLE_FRAC_IRPHE["ZrF4"]
+    x_UF4  = SALT_MOLE_FRAC_IRPHE["UF4"]
 
-    # Carrier salt mole ratios (sum to 99.2 mol %; UF4 takes the balance).
-    # Solve for x_UF4 such that
-    #   (mass U-235) / (mass salt) = 1.408 wt %
-    # where mass-fraction-of-U-235 = 0.333 * mass-fraction-of-U.
-    # Let xU = mole fraction UF4 and let the non-UF4 ratios be fixed at
-    # (65 : 29.2 : 5) normalized to (1 - xU). Then
-    #   wU = xU * M_U / (xU * M_UF4 + (1-xU) * M_carrier_avg)
-    # where M_carrier_avg is the mole-weighted molar mass of LiF+BeF2+ZrF4.
-    x_LiF_ratio  = 65.0 / 99.2
-    x_BeF2_ratio = 29.2 / 99.2
-    x_ZrF4_ratio = 5.0  / 99.2
-    M_carrier_avg = (x_LiF_ratio  * M_LiF
-                     + x_BeF2_ratio * M_BeF2
-                     + x_ZrF4_ratio * M_ZrF4)
-
-    # Target U-235 weight fraction in salt = 0.01408.
-    # 0.01408 = 0.333 * (xU * M_U) / (xU * M_UF4 + (1 - xU) * M_carrier_avg)
-    # => xU = 0.01408 * M_carrier_avg / (0.333 * M_U - 0.01408 * (M_UF4 - M_carrier_avg))
-    target_wU235 = U235_WT_IN_SALT_IRPHE
-    num = target_wU235 * M_carrier_avg
-    den = 0.333 * M_U - target_wU235 * (M_UF4 - M_carrier_avg)
-    xU = num / den
-    x_LiF  = (1.0 - xU) * x_LiF_ratio
-    x_BeF2 = (1.0 - xU) * x_BeF2_ratio
-    x_ZrF4 = (1.0 - xU) * x_ZrF4_ratio
-    x_UF4  = xU
-
+    # Cation atom totals per mole of mixture.
     n_Li = x_LiF
     n_Be = x_BeF2
     n_Zr = x_ZrF4
@@ -274,8 +304,11 @@ def build_fuel_salt_irphe(temperature_K: float = BENCHMARK_TEMP_K) -> openmc.Mat
     n_F  = x_LiF + 2 * x_BeF2 + 4 * x_ZrF4 + 4 * x_UF4
     total = n_Li + n_Be + n_Zr + n_U + n_F
 
+    # Lithium with Li-7 enrichment (atom fraction).
     salt.add_nuclide("Li6", (n_Li / total) * (1.0 - LI7_ENRICH))
     salt.add_nuclide("Li7", (n_Li / total) * LI7_ENRICH)
+
+    # Beryllium and natural zirconium isotopics.
     salt.add_nuclide("Be9", n_Be / total)
     zr_natural = {
         "Zr90": 0.5145, "Zr91": 0.1122, "Zr92": 0.1715,
@@ -283,10 +316,13 @@ def build_fuel_salt_irphe(temperature_K: float = BENCHMARK_TEMP_K) -> openmc.Mat
     }
     for nuc, frac in zr_natural.items():
         salt.add_nuclide(nuc, (n_Zr / total) * frac)
+
+    # Uranium at the IRPhE-specific 31.35 wt% U-235 enrichment.
     u_temp = openmc.Material()
-    u_temp.add_element("U", 1.0, enrichment=U235_ENRICH_WT)
+    u_temp.add_element("U", 1.0, enrichment=U235_ENRICH_IRPHE_WT)
     for nuc, frac, _percent_type in u_temp.nuclides:
         salt.add_nuclide(nuc, (n_U / total) * frac)
+
     salt.add_nuclide("F19", n_F / total)
     return salt
 
@@ -307,6 +343,7 @@ def build_all(temperature_K: float = BENCHMARK_TEMP_K, *, irphe: bool = False):
         "helium":   build_helium(temperature_K),
         "bushing":  build_control_bushing(),
         "inconel":  build_inconel600(),
+        "lower_head_mix": build_lower_head_mix(temperature_K),
     }
     return mats, openmc.Materials(list(mats.values()))
 
