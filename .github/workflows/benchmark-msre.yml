@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Geometry mode: homog, het, het_clipped, het_lh, het_can, het_rods_out, het_baskets, het_critical"
+        description: "Geometry mode: homog, het, het_clipped, het_lh, het_can, het_rods_out, het_baskets, het_critical, or 'plot' for geometry-verification PNGs only (no simulation)"
         required: false
         default: "homog"
         type: choice
@@ -33,6 +33,7 @@ on:
           - het_rods_out
           - het_baskets
           - het_critical
+          - plot
       particles:
         description: "Particles per batch (default 50000; reduce to 10000 for a fast smoke run)"
         required: false
@@ -99,8 +100,23 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ---- 3. Run the MSRE benchmark --------------------------------------
+      # ---- 3a. Geometry plot mode (no simulation) -------------------------
+      - name: Generate geometry plots
+        if: ${{ github.event.inputs.mode == 'plot' }}
+        run: |
+          mkdir -p out/plots
+          docker run --rm \
+            -v $PWD:/workspace \
+            -e OPENMC_CROSS_SECTIONS=/workspace/data/xs/endfb-viii.0-hdf5/cross_sections.xml \
+            -e HOME=/tmp \
+            -w /workspace \
+            promethea:ci \
+            python benchmarks/msre/plot_geometry.py 2>&1 | tee out/plot_geometry.log
+          ls -lh out/plots/
+
+      # ---- 3b. Run the MSRE benchmark (simulation modes) ------------------
       - name: Run MSRE benchmark
+        if: ${{ github.event.inputs.mode != 'plot' }}
         id: run
         env:
           PARTICLES: ${{ github.event.inputs.particles || '50000' }}
@@ -121,7 +137,7 @@ jobs:
 
       # ---- 4. Surface results in the GitHub UI ----------------------------
       - name: Extract k-eff and write summary
-        if: always()
+        if: ${{ always() && github.event.inputs.mode != 'plot' }}
         run: |
           {
             echo "## MSRE benchmark — results"
