@@ -177,6 +177,67 @@ For the experimental comparison (k = 0.99978), the +1455 pcm Promethea bias is i
 
 ---
 
+## Phase 1.1.d step 1 — stringer half-channel orientation fix (commit ffb9488)
+
+### Finding
+
+During Phase 1.1.d source audit (`STRINGER_GEOMETRY.md`), we discovered
+that the existing Phase 1.1.b/c lattice modeled each half-channel as
+1.524 cm deep × 1.016 cm long along the face. TM-0728 §2.6 specifies
+0.508 cm deep × 3.048 cm long, matching Shen 2021's full 1.016 × 3.048 cm
+full channels between paired stringers. The channels were rotated 90°
+from the as-built design.
+
+Fuel volume fraction is preserved (0.240 in both orientations) so all
+phase 1.1.b/c integral results were correct in mass terms. The geometry
+bug increased fuel-graphite interface area by 40% and inverted the
+cross-stringer channel aspect ratio.
+
+### Result (CI run 26637499678, het_critical, 100k × 100)
+
+| Comparison | k-eff | Δ |
+|---|---|---|
+| Phase 1.1.c step 5 (swapped channels) | 1.01433 ± 0.00038 | — |
+| **Phase 1.1.d step 1 (corrected channels)** | **1.01308 ± 0.00036** | **−125 ± 52 pcm** |
+| IRPhE Serpent (Shen 2021) | 1.02132 ± 0.00003 | −824 pcm vs us |
+| IRPhE experimental (June 1, 1965) | 0.99978 | +1330 pcm vs us |
+
+The fix moved k-eff **down by 125 pcm** (statistically significant,
+Δ/σ ≈ 2.4). Direction is opposite to my prior estimate; reasoning revised:
+
+- More fuel-moderator interface area increases thermalization but also
+  increases parasitic U-235 absorption per unit moderation in already
+  well-moderated regimes.
+- Net effect for MSRE-class graphite + dilute U-235 + 7Li-enriched salt:
+  small negative bias from increased interface.
+- This is consistent with Fratoni 2023's observation that stringer-detail
+  sensitivity is ~few-hundred pcm in either direction.
+
+### Implication for the IRPhE benchmark gap
+
+Vs the Serpent target the gap *widened* (824 pcm), but vs the experimental
+criticality value the gap *narrowed* (1330 pcm). The orientation fix is
+physics-correct (TM-0728 is unambiguous), so the closer-to-experiment
+direction is the trustworthy reading. Worth flagging that Shen 2021's
++2154 pcm overprediction relative to experiment may itself include some
+geometry approximations we have now removed.
+
+### Next sub-steps within Phase 1.1.d
+
+1. **Corner rounding of half-channels** — TM-0728 §2.6 says rounding
+   reduces fuel fraction from 0.240 to 0.225 (~6.25%). Direction: +k
+   (less salt + slightly more graphite per cell). Estimated +30-80 pcm.
+2. **CGB graphite B-10 content sweep** (0.1 → 1.0 ppm) to bracket the
+   IRPhE input value. Estimated ±100-300 pcm sensitivity, cheap (3 short
+   runs).
+3. **Cross-section library comparison** (ENDF/B-VIII.0 vs JEFF-3.3 vs
+   ENDF/B-VII.1). Estimated ±100-300 pcm. Most expensive sub-step.
+
+Proceed in this order — sub-step 1 leverages the fresh orientation work,
+sub-step 2 is the cheapest sensitivity, and sub-step 3 is the long-run.
+
+---
+
 ## Phase order
 
 Recommend implementing in this order:
