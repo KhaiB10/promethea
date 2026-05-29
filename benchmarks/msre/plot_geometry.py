@@ -100,18 +100,36 @@ def main():
     plot3.colors = _material_palette(materials_obj)
 
     # ------------------------------------------------------------------ #
-    # Plot 4: vertical xz cross-section through y = 0
+    # Plot 4: full active-core cross-section at z = +50 cm
+    # This slice intersects the inserted control rod (rod tip at z=+35.139
+    # cm). At z=+50 cm the poison column is present, so this plot shows
+    # the inserted-rod thimble distinct from the three withdrawn thimbles.
     # ------------------------------------------------------------------ #
     plot4 = openmc.Plot()
-    plot4.filename = "04_core_xz_y0"
-    plot4.basis = "xz"
-    plot4.origin = (0.0, 0.0, ACTIVE_CORE_HEIGHT / 2.0)
-    plot4.width = (160.0, ACTIVE_CORE_HEIGHT + 80.0)
-    plot4.pixels = (1600, 2200)
+    plot4.filename = "04_core_xy_above_rod_tip"
+    plot4.basis = "xy"
+    plot4.origin = (0.0, 0.0, 50.0)
+    plot4.width = (40.0, 40.0)  # zoom on the rod cluster + nearby lattice
+    plot4.pixels = (1600, 1600)
     plot4.color_by = "material"
     plot4.colors = _material_palette(materials_obj)
 
-    model.plots = openmc.Plots([plot1, plot2, plot3, plot4])
+    # ------------------------------------------------------------------ #
+    # Plot 5: vertical xz cross-section through y = +7.62 cm
+    # (passes through the two rods at +y, including the inserted one at
+    # x=-7.62 y=+7.62). Shows the full vertical extent: lower head ->
+    # active core -> upper plenum, and the rod tip position at z=+35.139.
+    # ------------------------------------------------------------------ #
+    plot5 = openmc.Plot()
+    plot5.filename = "05_core_xz_y_rod_row"
+    plot5.basis = "xz"
+    plot5.origin = (0.0, 7.62, 0.0)
+    plot5.width = (50.0, ACTIVE_CORE_HEIGHT + 80.0)
+    plot5.pixels = (1200, 2400)
+    plot5.color_by = "material"
+    plot5.colors = _material_palette(materials_obj)
+
+    model.plots = openmc.Plots([plot1, plot2, plot3, plot4, plot5])
 
     # Export and run the OpenMC plot command from a clean working subdir.
     workdir = Path("out/plot_run")
@@ -128,7 +146,7 @@ def main():
         # Convert .ppm to .png and copy to out/plots/
         png_dir = cwd / "out" / "plots"
         png_dir.mkdir(parents=True, exist_ok=True)
-        for plot in [plot1, plot2, plot3, plot4]:
+        for plot in [plot1, plot2, plot3, plot4, plot5]:
             name = Path(plot.filename).name
             ppm_path = Path(f"{name}.ppm")
             if not ppm_path.exists():
@@ -156,22 +174,27 @@ def _material_palette(materials_obj: openmc.Materials):
     # Color scheme picked so salt (yellow), graphite (dark gray),
     # INOR-8 (steel blue), poison (red), vessel/can (slate) are all
     # visually distinct.
-    name_colors = {
-        "salt":    (255, 215, 0),       # gold
-        "graph":   (40, 40, 40),        # dark gray
-        "inor":    (90, 110, 140),      # steel blue
-        "gd":      (200, 30, 30),       # red (Gd2O3 poison)
-        "poison":  (200, 30, 30),
-        "mix":     (170, 145, 90),      # tan (lower-head mix, basket mix)
-        "basket":  (210, 180, 110),
-        "lower-head": (170, 145, 90),
-    }
+    # Order matters: more specific keys first because matching is substring-
+    # based and stops at the first hit. "inconel" must be checked before
+    # "inor" since "inor" is a substring of "inconel-600".
+    name_colors = [
+        ("inconel",     (170, 100, 60)),    # copper/brown (Inconel rod cladding)
+        ("lower-head",  (170, 145, 90)),    # tan (lower-head mix)
+        ("basket",      (210, 180, 110)),   # tan (sample basket mix)
+        ("gd",          (200, 30, 30)),     # red (Gd2O3 poison bushing)
+        ("poison",      (200, 30, 30)),
+        ("mix",         (170, 145, 90)),    # tan (other mixes)
+        ("helium",      (220, 220, 250)),   # pale blue
+        ("salt",        (255, 215, 0)),     # gold
+        ("graph",       (40, 40, 40)),      # dark gray
+        ("inor",        (90, 110, 140)),    # steel blue
+    ]
     fallback = (180, 180, 180)
     palette = {}
     for mat in materials_obj:
         name_lc = (mat.name or "").lower()
         chosen = None
-        for key, rgb in name_colors.items():
+        for key, rgb in name_colors:
             if key in name_lc:
                 chosen = rgb
                 break
