@@ -704,6 +704,168 @@ def build_geometry_het_rods_out(mats: Dict[str, openmc.Material]):
     return openmc.Geometry(root), []
 
 
+def build_geometry_het_baskets(mats: Dict[str, openmc.Material]):
+    """
+    Phase 1.1.c step 4: het_rods_out + sample basket fill at the 4th array
+    position.
+
+    Three positions of the 2x2 thimble array hold control rods (here, plain
+    INOR-8 thimbles with salt-filled bores since rods are withdrawn). The
+    fourth position (chosen here as the (-,-) corner; the choice is arbitrary
+    by 4-fold symmetry of the layout) holds the surveillance/sample
+    assembly: same 5.08 cm OD INOR-8 thimble shell, but its bore is filled
+    with a homogenized graphite + INOR-8 + salt mixture over the active core
+    height to represent the four-INOR-8-rod and five-graphite-bar contents
+    of each basket (Shen et al. 2021).
+
+    Above and below the active core the basket bore reverts to pure salt.
+
+    Expected k-eff delta vs het_rods_out: roughly -100 to -300 pcm. The
+    extra graphite in the basket adds a small moderation boost in the
+    central core, but the INOR-8 specimens are parasitic absorbers; the
+    net effect in published IRPhE analyses is negative on k-eff.
+    """
+    half_h = ACTIVE_CORE_HEIGHT / 2.0
+
+    core_bot   = openmc.ZPlane(-half_h, name="active_core_bottom")
+    core_top   = openmc.ZPlane(+half_h, name="active_core_top")
+    core_outer = openmc.ZCylinder(r=CORE_RADIUS,  name="core_cylinder")
+    can_inner  = openmc.ZCylinder(r=CORE_CAN_IR,  name="core_can_inner")
+    can_outer  = openmc.ZCylinder(r=CORE_CAN_OR,  name="core_can_outer")
+
+    vessel_inner = openmc.ZCylinder(r=VESSEL_ID,  name="vessel_inner")
+    vessel_outer = openmc.ZCylinder(r=VESSEL_OR,  name="vessel_outer",
+                                    boundary_type="vacuum")
+    vessel_bot   = openmc.ZPlane(-half_h - PLENUM_HEIGHT,
+                                 name="vessel_bottom", boundary_type="vacuum")
+    vessel_top   = openmc.ZPlane(+half_h + PLENUM_HEIGHT,
+                                 name="vessel_top",    boundary_type="vacuum")
+
+    # Four thimble positions. Index 3 (the (-,-) corner) holds the sample
+    # basket; positions 0, 1, 2 are plain salt-bore thimbles.
+    thimble_positions = [
+        (+ROD_ARRAY_OFFSET, +ROD_ARRAY_OFFSET),
+        (+ROD_ARRAY_OFFSET, -ROD_ARRAY_OFFSET),
+        (-ROD_ARRAY_OFFSET, +ROD_ARRAY_OFFSET),
+        (-ROD_ARRAY_OFFSET, -ROD_ARRAY_OFFSET),  # <- sample basket
+    ]
+    BASKET_INDEX = 3
+
+    thimble_outer_surfs = []
+    thimble_inner_surfs = []
+    for i, (x, y) in enumerate(thimble_positions):
+        thimble_outer_surfs.append(
+            openmc.ZCylinder(x0=x, y0=y, r=THIMBLE_OR,
+                             name=f"thimble_{i}_outer")
+        )
+        thimble_inner_surfs.append(
+            openmc.ZCylinder(x0=x, y0=y, r=THIMBLE_IR,
+                             name=f"thimble_{i}_inner")
+        )
+
+    outside_thimbles = (+thimble_outer_surfs[0]
+                        & +thimble_outer_surfs[1]
+                        & +thimble_outer_surfs[2]
+                        & +thimble_outer_surfs[3])
+
+    lattice = _build_core_lattice(mats)
+
+    lattice_cell = openmc.Cell(
+        name="core_lattice_cell",
+        fill=lattice,
+        region=(-core_outer & +core_bot & -core_top & outside_thimbles),
+    )
+
+    salt_film = openmc.Cell(
+        name="core_can_inner_salt_film",
+        fill=mats["salt"],
+        region=(+core_outer & -can_inner & +core_bot & -core_top
+                & outside_thimbles),
+    )
+
+    core_can = openmc.Cell(
+        name="core_can",
+        fill=mats["inor"],
+        region=(+can_inner & -can_outer & +core_bot & -core_top),
+    )
+
+    downcomer_cell = openmc.Cell(
+        name="core_downcomer",
+        fill=mats["salt"],
+        region=(+can_outer & -vessel_inner & +core_bot & -core_top),
+    )
+
+    upper_plenum = openmc.Cell(
+        name="upper_plenum",
+        fill=mats["salt"],
+        region=(-vessel_inner & +core_top & -vessel_top & outside_thimbles),
+    )
+
+    lower_head = openmc.Cell(
+        name="lower_head_mix",
+        fill=mats["lower_head_mix"],
+        region=(-vessel_inner & -core_bot & +vessel_bot & outside_thimbles),
+    )
+
+    vessel_wall = openmc.Cell(
+        name="vessel_wall",
+        fill=mats["inor"],
+        region=(+vessel_inner & -vessel_outer
+                & +vessel_bot & -vessel_top),
+    )
+
+    # Thimble cells. Thimbles 0, 1, 2 are full-height salt-bore.
+    # Thimble at BASKET_INDEX has a basket-mix bore over the active core
+    # and salt bore above/below.
+    thimble_cells = []
+    for i, _ in enumerate(thimble_positions):
+        shell = openmc.Cell(
+            name=f"thimble_{i}_shell",
+            fill=mats["inor"],
+            region=(+thimble_inner_surfs[i] & -thimble_outer_surfs[i]
+                    & +vessel_bot & -vessel_top),
+        )
+        thimble_cells.append(shell)
+
+        if i == BASKET_INDEX:
+            # Active-core bore: sample-basket homogenized mix
+            basket_active = openmc.Cell(
+                name=f"thimble_{i}_bore_basket_mix",
+                fill=mats["sample_basket_mix"],
+                region=(-thimble_inner_surfs[i]
+                        & +core_bot & -core_top),
+            )
+            # Below active core: pure salt
+            basket_below = openmc.Cell(
+                name=f"thimble_{i}_bore_below_salt",
+                fill=mats["salt"],
+                region=(-thimble_inner_surfs[i]
+                        & +vessel_bot & -core_bot),
+            )
+            # Above active core: pure salt
+            basket_above = openmc.Cell(
+                name=f"thimble_{i}_bore_above_salt",
+                fill=mats["salt"],
+                region=(-thimble_inner_surfs[i]
+                        & +core_top & -vessel_top),
+            )
+            thimble_cells += [basket_active, basket_below, basket_above]
+        else:
+            bore = openmc.Cell(
+                name=f"thimble_{i}_bore_salt",
+                fill=mats["salt"],
+                region=(-thimble_inner_surfs[i] & +vessel_bot & -vessel_top),
+            )
+            thimble_cells.append(bore)
+
+    root = openmc.Universe(cells=[
+        lattice_cell, salt_film, core_can, downcomer_cell,
+        upper_plenum, lower_head, vessel_wall,
+        *thimble_cells,
+    ])
+    return openmc.Geometry(root), []
+
+
 # Re-export geometry constants under canonical names for convenience.
 ACTIVE_CORE_HEIGHT_HET = ACTIVE_CORE_HEIGHT
 CORE_RADIUS_HET = CORE_RADIUS
