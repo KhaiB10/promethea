@@ -6,31 +6,52 @@ All numerical values here are derived from publicly available ORNL technical rep
 
 | Parameter | Value | Reference |
 |---|---|---|
-| Active core height | 348.2 cm (11.42 ft) | ORNL-4119, IRPhE |
-| Active core diameter | 274.3 cm (9 ft) | ORNL-4119, IRPhE |
-| Graphite stringer cross-section | 5.08 × 5.08 cm (2 × 2 in) nominal | ORNL-4119 |
-| Fuel salt channel cross-section | Roughly half-cylinder grooves on stringer faces | ORNL-4119 |
-| Salt volume fraction in core | ~22.5 % | ORNL-4119 |
-| Graphite volume fraction in core | ~76.0 % | ORNL-4119 |
-| Number of graphite stringers | ~512 | ORNL-4119 |
-| Number of control rod thimbles | 3 (triangular arrangement) | ORNL-4119 |
-| Reactor vessel inner diameter | ~147.3 cm (58 in) | ORNL-4119 |
-| Reactor vessel wall thickness | ~2.22 cm (7/8 in) INOR-8 | ORNL-4119 |
+| Active graphite core height | **166.446 ± 1 cm** (5.46 ft) | Fratoni / IRPhE |
+| Active graphite core radius (equivalent) | **70.168 ± 0.2 cm** | Fratoni / IRPhE |
+| Graphite stringer cross-section | 5.08 × 5.08 cm (2 × 2 in) | ORNL-4119 |
+| Lattice pitch | 5.08 cm (2 in) square | ORNL-4119 |
+| Fuel channel cross-section | **1.016 ± 0.127 cm × 3.048 ± 0.127 cm** (rectangular, formed by mating half-grooves on stringer faces) | Fratoni / IRPhE |
+| Approximate channel count | ~1,140 equivalent full channels | ORNL TRANSFORM report (Pub133245) |
+| Salt volume fraction in core (homogenized) | ~22.5 % | ORNL-4119 |
+| Graphite volume fraction in core (homogenized) | ~76.0 % | ORNL-4119 |
+| Number of control rod thimbles | 3 (triangular, near core axis) | ORNL-4119 |
+| Core barrel OD | 142.24 cm (56 in) | ORNL Pub133245 |
+| Reactor vessel ID | **147.32 cm (58 in)** | ORNL Pub133245 |
+| Annular downcomer height | ~162.6 cm (64 in) | ORNL Pub133245 |
 | Upper / lower head | Hemispherical, INOR-8 | ORNL-4119 |
 | Lower head modeling (CSG benchmark) | Homogenized: 90.8 vol % fuel salt + 9.2 vol % INOR-8 | IRPhE |
 
+Note on heights — earlier draft of this sheet listed the active core height as 348.2 cm, which conflated the *vessel* extent (vessel ID 58 in by ~6.6 ft total) with the *graphite-active* extent. The graphite-active height per IRPhE/Fratoni is 166.446 cm; the homogenized v0 model uses the larger envelope to keep flux escape losses bounded, while the heterogeneous v1 model uses the canonical 166.446 cm.
+
 ## 2. Fuel salt (zero-power criticality, June 1965)
 
-Composition (mole fractions):
+Two compositions appear in the literature; both are supported in `materials.py`:
+
+### 2a. Historical pump-fill recipe
 
 | Component | Mole % | Notes |
 |---|---|---|
 | LiF (Li-7 enriched, ≥99.99 %) | 65.0 | |
 | BeF₂ | 29.1 | |
 | ZrF₄ | 5.0 | Suppresses UO₂ precipitation if oxygen enters salt |
-| UF₄ | 0.9 | Fuel; ~33 % enriched U-235 in original loading |
+| UF₄ | 0.9 | Fuel; 33.3 wt % U-235 enrichment |
 
-Density at 911 K: **2.3275 g/cm³** (ORNL-TM-0728)
+This is the recipe used by `build_fuel_salt()` and the homogenized v0 model. It corresponds to roughly 2.5 wt % U-235 in salt.
+
+### 2b. IRPhE first-criticality loading (used by heterogeneous v1)
+
+| Component | Mole % | Notes |
+|---|---|---|
+| LiF (Li-7 enriched, 99.995 at %) | 65.04 | |
+| BeF₂ | 29.22 | |
+| ZrF₄ | 5.00 | |
+| UF₄ | 0.736 | Back-solved to hit the IRPhE 1.408 wt % U-235-in-salt target |
+
+**U-235 mass fraction in salt: 1.408 wt %** (Fratoni / IRPhE).
+U-235 enrichment of the uranium: **33.3 wt %**.
+This is the configuration used by `build_fuel_salt_irphe()` and the heterogeneous v1 model.
+
+Density at 911 K (both recipes): **2.3275 ± 0.0160 g/cm³** (ORNL-TM-0728)
 Operating temperature for benchmark: **911 K** (= 638 °C = 1180 °F)
 
 ## 3. Moderator graphite
@@ -38,7 +59,7 @@ Operating temperature for benchmark: **911 K** (= 638 °C = 1180 °F)
 | Parameter | Value | Reference |
 |---|---|---|
 | Grade | CGB graphite, Carbon Products Division of Union Carbide | ORNL-4119 |
-| Density | 1.86 g/cm³ | ORNL-4119 |
+| Density | **1.87 ± 0.02 g/cm³** | Fratoni / IRPhE |
 | Boron impurity | ~0.3 ppm | ORNL-4119 |
 | Thermal scattering kernel | `c_Graphite` (OpenMC built-in) | OpenMC docs |
 
@@ -95,13 +116,27 @@ Comparison runs may also use ENDF/B-VII.1 and JEFF 3.3 for sensitivity studies.
 
 ## 8. Expected results (acceptance criteria)
 
-The first Promethea CSG run should produce:
+The Promethea benchmark suite has two acceptance gates.
 
-- **k-eff = 1.020 ± 0.002** (matches published OpenMC CSG values within statistical uncertainty + cross-section variation)
-- **Fuel temperature coefficient α_T,fuel ≈ –3 to –4 × 10⁻⁵ K⁻¹** (must be negative; magnitude per ORNL-4119 Part III)
-- **Graphite temperature coefficient α_T,graphite ≈ +1 × 10⁻⁵ K⁻¹** (positive, smaller magnitude than fuel — net coefficient remains negative)
+### 8a. Homogenized v0 (Phase 1.1.a)
+- **k-eff in 1.00 ≤ k ≤ 1.15** (loose envelope; homogenization biases k-eff upward)
+- Purpose: validate the toolchain (cross-section linking, material build, S(α,β) kernel, source convergence)
 
-If the run lands inside these envelopes, the toolchain is validated and Phase 1.2 (digital twin) can begin.
+### 8b. Heterogeneous v1 (Phase 1.1.b — this milestone)
+- **k-eff in 0.98 ≤ k ≤ 1.05**, target **~1.020 ± 0.002** (matches published OpenMC CSG with rods withdrawn — Yilmaz 2024, Fratoni 2023)
+- Three control rod thimbles approximated as withdrawn (deferred to v2)
+- Sample baskets not modeled (deferred to v2)
+- Axial taper region simplified
+
+### 8c. Heterogeneous v2 (Phase 1.1.c — future)
+- **k-eff in 0.995 ≤ k ≤ 1.010**, target **~1.000** (matches IRPhE experimental k-eff)
+- Adds: regulating rod inserted to 46.6 in, fitted edge-stringer geometry, sample baskets, axial taper
+
+### 8d. Temperature coefficients (Phase 1.1.d — future)
+- **Fuel temperature coefficient α_T,fuel ≈ –3 to –4 × 10⁻⁵ K⁻¹** (must be negative; ORNL-4119 Part III)
+- **Graphite temperature coefficient α_T,graphite ≈ +1 × 10⁻⁵ K⁻¹** (positive but smaller magnitude than fuel — net coefficient remains negative)
+
+When 8b lands inside its envelope, the toolchain is validated for Phase 1.2 (digital twin) work in parallel.
 
 ## References
 

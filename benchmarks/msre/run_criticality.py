@@ -1,22 +1,39 @@
 """
 benchmarks/msre/run_criticality.py
 
-Phase 1.1 acceptance test: run the homogenized MSRE v0 model in OpenMC
+Phase 1.1 acceptance test: run the MSRE criticality model in OpenMC
 and report k-eff vs the published acceptance envelope.
 
-Usage:
-    python benchmarks/msre/run_criticality.py [--quick]
+Two configurations are supported:
 
-Outputs:
-    sims/openmc/msre_v0/  (XML inputs, statepoint file)
-    A summary line on stdout with k-eff and a PASS/FAIL banner.
+  Homogenized v0 (default)
+      Salt and graphite smeared in core; loose envelope 1.00 - 1.15.
+      Used to validate the toolchain end to end.
 
-Acceptance for the homogenized v0 model:
-    k-eff in the range 1.00 - 1.15 (loose — this is a homogenized core,
-    expect significantly higher than the heterogeneous benchmark value).
+  Heterogeneous (--het)
+      Explicit 5.08 cm graphite stringers with 1.016 x 3.048 cm fuel
+      channels, on a 2-inch square pitch lattice. IRPhE first-criticality
+      salt loading (1.408 wt % U-235 in salt at 33.3 wt % U-235 enrichment).
+      Acceptance envelope 0.98 - 1.05, target ~1.020 (published OpenMC
+      CSG result with rods withdrawn).
 
-The heterogeneous-CSG follow-up (Phase 1.1.b) tightens this to:
-    k-eff = 1.020 +/- 0.002 (matches published OpenMC CSG figures).
+Usage
+-----
+    python benchmarks/msre/run_criticality.py            # homogenized v0
+    python benchmarks/msre/run_criticality.py --het      # heterogeneous v1
+    python benchmarks/msre/run_criticality.py --quick    # fast smoke run
+    python benchmarks/msre/run_criticality.py --het --quick
+
+Environment overrides (used by GitHub Actions CI)
+-------------------------------------------------
+    PROMETHEA_BATCHES    = override batch count
+    PROMETHEA_PARTICLES  = override particles per batch
+    PROMETHEA_MODE       = "homog" or "het" (alternative to --het)
+
+Outputs
+-------
+    sims/openmc/msre_<mode>/  XML inputs, statepoint, tallies
+    stdout                    k-eff line and PASS / REVIEW banner
 """
 from __future__ import annotations
 
@@ -38,13 +55,35 @@ except ImportError:
 _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE))
 
-from materials import build_all, BENCHMARK_TEMP_K  # noqa: E402
+from materials import build_all, BENCHMARK_TEMP_K            # noqa: E402
 from geometry import build_geometry, ACTIVE_CORE_HEIGHT, CORE_RADIUS  # noqa: E402
+from geometry_het import (                                    # noqa: E402
+    build_geometry_het,
+    ACTIVE_CORE_HEIGHT_HET,
+    CORE_RADIUS_HET,
+)
 
 
-def build_model(quick: bool = False) -> openmc.Model:
-    mats_dict, mats = build_all(temperature_K=BENCHMARK_TEMP_K)
-    geometry, extra_mats = build_geometry(mats_dict)
+# Acceptance envelopes per mode.
+ENVELOPE = {
+    "homog": (1.00, 1.15, "homogenized v0"),
+    "het":   (0.98, 1.05, "heterogeneous v1 (rods withdrawn, IRPhE salt)"),
+}
+
+
+def build_model(quick: bool = False, het: bool = False) -> openmc.Model:
+    mode = "het" if het else "homog"
+    mats_dict, mats = build_all(temperature_K=BENCHMARK_TEMP_K, irphe=het)
+
+    if het:
+        geometry, extra_mats = build_geometry_het(mats_dict)
+        core_radius = CORE_RADIUS_HET
+        active_h    = ACTIVE_CORE_HEIGHT_HET
+    else:
+        geometry, extra_mats = build_geometry(mats_dict)
+        core_radius = CORE_RADIUS
+        active_h    = ACTIVE_CORE_HEIGHT
+
     for em in extra_mats:
         mats.append(em)
 
@@ -70,14 +109,15 @@ def build_model(quick: bool = False) -> openmc.Model:
         settings.inactive = max(10, b // 4)
     if env_particles:
         settings.particles = int(env_particles)
-    print(f"[msre_v0] settings: batches={settings.batches} "
+    print(f"[msre_{mode}] settings: batches={settings.batches} "
           f"inactive={settings.inactive} particles={settings.particles}")
 
     # Initial source — a thin slab through the middle of the active core,
     # restricted to fissionable material to get a fast initial guess.
+    half_h = active_h / 2.0
     src_box = openmc.stats.Box(
-        [-CORE_RADIUS * 0.8, -CORE_RADIUS * 0.8, ACTIVE_CORE_HEIGHT * 0.25],
-        [+CORE_RADIUS * 0.8, +CORE_RADIUS * 0.8, ACTIVE_CORE_HEIGHT * 0.75],
+        [-core_radius * 0.8, -core_radius * 0.8, -half_h * 0.5],
+        [+core_radius * 0.8, +core_radius * 0.8, +half_h * 0.5],
         only_fissionable=True,
     )
     settings.source = openmc.IndependentSource(space=src_box)
@@ -90,19 +130,31 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quick", action="store_true",
                         help="Fast smoke run (fewer batches/particles).")
+    parser.add_argument("--het", action="store_true",
+                        help="Use heterogeneous lattice geometry + IRPhE salt.")
     args = parser.parse_args()
 
+    # Allow CI to pick mode without code edits.
+    env_mode = os.environ.get("PROMETHEA_MODE", "").lower()
+    if env_mode == "het":
+        args.het = True
+    elif env_mode == "homog":
+        args.het = False
+
+    mode = "het" if args.het else "homog"
+    lo, hi, label = ENVELOPE[mode]
+
     repo_root = _HERE.parents[1]
-    run_dir = repo_root / "sims" / "openmc" / "msre_v0"
+    run_dir = repo_root / "sims" / "openmc" / f"msre_{mode}"
     if run_dir.exists():
         shutil.rmtree(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     os.chdir(run_dir)
 
-    print(f"[msre_v0] Building model (quick={args.quick}) ...")
-    model = build_model(quick=args.quick)
+    print(f"[msre_{mode}] Building model (quick={args.quick}, het={args.het}) ...")
+    model = build_model(quick=args.quick, het=args.het)
 
-    print(f"[msre_v0] Running OpenMC in {run_dir} ...")
+    print(f"[msre_{mode}] Running OpenMC in {run_dir} ...")
     sp_path = model.run(output=True)
 
     with openmc.StatePoint(sp_path) as sp:
@@ -110,14 +162,13 @@ def main():
         k = keff.nominal_value
         sd = keff.std_dev
 
-    lo, hi = 1.00, 1.15
     passed = lo <= k <= hi
     banner = "PASS" if passed else "REVIEW"
 
     print()
     print("=" * 64)
     print(f"  k-eff (combined) = {k:.5f} +/- {sd:.5f}")
-    print(f"  Acceptance envelope (homogenized v0): {lo:.2f} <= k <= {hi:.2f}")
+    print(f"  Acceptance envelope ({label}): {lo:.2f} <= k <= {hi:.2f}")
     print(f"  Result: {banner}")
     print("=" * 64)
     if not passed:

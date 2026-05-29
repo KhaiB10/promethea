@@ -19,6 +19,14 @@ name: benchmark-msre
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: "Geometry mode: homog (homogenized v0) or het (heterogeneous v1)"
+        required: false
+        default: "homog"
+        type: choice
+        options:
+          - homog
+          - het
       particles:
         description: "Particles per batch (default 50000; reduce to 10000 for a fast smoke run)"
         required: false
@@ -79,11 +87,12 @@ jobs:
           cache-to: type=gha,mode=max
 
       # ---- 3. Run the MSRE benchmark --------------------------------------
-      - name: Run MSRE homogenized v0
+      - name: Run MSRE benchmark
         id: run
         env:
           PARTICLES: ${{ github.event.inputs.particles || '50000' }}
           BATCHES: ${{ github.event.inputs.batches || '120' }}
+          MODE: ${{ github.event.inputs.mode || 'homog' }}
         run: |
           mkdir -p out
           docker run --rm \
@@ -91,6 +100,7 @@ jobs:
             -e OPENMC_CROSS_SECTIONS=/workspace/data/xs/endfb-viii.0-hdf5/cross_sections.xml \
             -e PROMETHEA_PARTICLES=$PARTICLES \
             -e PROMETHEA_BATCHES=$BATCHES \
+            -e PROMETHEA_MODE=$MODE \
             -w /workspace \
             promethea:ci \
             python benchmarks/msre/run_criticality.py 2>&1 | tee out/msre_run.log
@@ -100,9 +110,10 @@ jobs:
         if: always()
         run: |
           {
-            echo "## MSRE homogenized v0 — results"
+            echo "## MSRE benchmark — results"
             echo ""
             echo "**Commit:** \`${GITHUB_SHA:0:7}\`"
+            echo "**Mode:** ${{ github.event.inputs.mode || 'homog' }}"
             echo "**Particles/batch:** ${{ github.event.inputs.particles || '50000' }}"
             echo "**Batches:** ${{ github.event.inputs.batches || '120' }}"
             echo ""
@@ -116,21 +127,21 @@ jobs:
             tail -40 out/msre_run.log
             echo '```'
             echo ""
-            echo "### Acceptance envelope"
-            echo "- v0 (homogenized) target: \`1.00 <= k <= 1.15\`"
-            echo "- Heterogeneous CSG target (future): \`k ~ 1.020\`"
-            echo "- IRPhE experimental: \`k = 0.99978\`"
+            echo "### Acceptance envelopes"
+            echo "- v0 (homogenized) envelope: \`1.00 <= k <= 1.15\`"
+            echo "- v1 (heterogeneous, IRPhE salt, rods withdrawn) envelope: \`0.98 <= k <= 1.05\`, target \`~1.020\`"
+            echo "- IRPhE experimental k-eff: \`0.99978\` (rods inserted to critical)"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload run artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: msre-v0-run-${{ github.run_number }}
+          name: msre-${{ github.event.inputs.mode || 'homog' }}-run-${{ github.run_number }}
           path: |
             out/
-            statepoint.*.h5
-            tallies.out
-            summary.h5
+            sims/openmc/msre_*/statepoint.*.h5
+            sims/openmc/msre_*/tallies.out
+            sims/openmc/msre_*/summary.h5
           if-no-files-found: warn
           retention-days: 30
