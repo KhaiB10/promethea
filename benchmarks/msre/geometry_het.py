@@ -58,13 +58,49 @@ FUEL_CHANNEL_DEPTH  = 3.048 / 2.0   # half-groove depth (1.524 cm into each stri
 ACTIVE_CORE_HEIGHT  = 166.446       # IRPhE graphite-active height
 CORE_RADIUS         = 70.168        # IRPhE active-core equivalent radius
 
-# Vessel and downcomer
-CORE_BARREL_OR      = 142.24 / 2.0  # 56 in OD core barrel
-VESSEL_ID           = 147.32 / 2.0  # 58 in ID vessel
-VESSEL_WALL         = 1.27          # 0.5 in INOR-8 wall (typical)
+# Vessel, core can, and downcomer dimensions
+# All from ORNL-TM-0728 Table 3.1 (20-region IRPhE core model).
+#
+# Region I (Core can):       r = 27.75 to 28.00 in  =>  70.485 to 71.12 cm
+# Region F (Downcomer):      r = 28.00 to 29.00 in  =>  71.12  to 73.66 cm
+# Region B (Vessel wall):    r = 29.00 to 29.56 in  =>  73.66  to 75.08 cm
+CORE_CAN_IR         = 70.485        # 27.75 in core can inner radius
+CORE_CAN_OR         = 71.12         # 28.00 in core can outer radius (= 56 in OD / 2)
+VESSEL_ID           = 73.66         # 29.00 in vessel inner radius
+VESSEL_WALL         = 1.42          # 0.56 in INOR-8 wall (TM-0728 Region B)
+
+# Control rod thimble dimensions (ORNL-TM-0728 §4.1).
+# Each thimble has 2.00 in OD x 0.10 in wall = 5.08 cm OD, 0.254 cm wall.
+# (Derived from the homogenized 6.00 in OD x 0.10 in thick annulus that
+# preserves both volume and outside surface area for 3 thimbles.)
+# Poison cylinder: 1.08 in OD x 0.12 in wall = 2.743 cm OD, 0.305 cm wall.
+THIMBLE_OD          = 5.08          # 2.00 in OD
+THIMBLE_WALL        = 0.254         # 0.10 in
+THIMBLE_OR          = THIMBLE_OD / 2.0
+THIMBLE_IR          = THIMBLE_OR - THIMBLE_WALL
+POISON_OD           = 2.743         # 1.08 in OD
+POISON_WALL         = 0.305         # 0.12 in
+POISON_OR           = POISON_OD / 2.0
+POISON_IR           = POISON_OR - POISON_WALL
+
+# 2x2 control rod array layout (ORNL-TM-0728 Fig 3.2, Shen Fig 2).
+# Three control rod thimbles and one sample basket are arranged in a
+# square 2x2 pattern around the reactor centerline. Each position sits
+# one stringer pitch off the centerline in both x and y -> rod centers at
+# (±pitch/2, ±pitch/2). Since pitch = 5.08 cm and thimble OD = 5.08 cm,
+# the thimble at (+pitch/2, +pitch/2) is tangent to those at the other
+# three positions. The IRPhE-Fig 3.2 layout shows them slightly separated
+# with the actual center-to-center spacing equal to about 3 pitches —
+# i.e. rod centers at (±1.5 * pitch, ±1.5 * pitch) = (±7.62, ±7.62) cm.
+# That position is consistent with the TM-0728 Table 3.1 Region K
+# homogenized thimble annulus at r = 7.37-7.62 cm.
+ROD_ARRAY_OFFSET    = 1.5 * STRINGER_PITCH   # 7.62 cm from centerline on each axis
 VESSEL_OR           = VESSEL_ID + VESSEL_WALL
 PLENUM_HEIGHT       = 40.64         # 16 in upper and lower plena (approximate)
 TOTAL_VESSEL_HEIGHT = ACTIVE_CORE_HEIGHT + 2 * PLENUM_HEIGHT
+# Legacy alias — some earlier code used a single "core barrel" name. The
+# core barrel of MSRE *is* the core can; we keep the alias to avoid breakage.
+CORE_BARREL_OR      = CORE_CAN_OR
 
 
 # ---------------------------------------------------------------------------
@@ -411,6 +447,259 @@ def build_geometry_het_lh(mats: Dict[str, openmc.Material]):
     root = openmc.Universe(cells=[
         lattice_cell, downcomer_cell,
         upper_plenum, lower_head, vessel_wall,
+    ])
+    return openmc.Geometry(root), []
+
+
+# ---------------------------------------------------------------------------
+# v1c-can geometry: clipped lattice + lower-head mix + INOR-8 core can
+# ---------------------------------------------------------------------------
+
+def build_geometry_het_can(mats: Dict[str, openmc.Material]):
+    """
+    Phase 1.1.c step 2: het_lh + an explicit INOR-8 core can between the
+    graphite stringer assembly and the salt downcomer.
+
+    Radial structure inside the active core height
+    -----------------------------------------------
+    r = 0      ->  70.168 cm:  graphite stringer lattice (in fuel salt)
+    r = 70.168 -> 70.485 cm:   thin salt film (0.317 cm; between lattice edge
+                               and core can inner radius)
+    r = 70.485 -> 71.12 cm:    core can (INOR-8, 0.635 cm wall, TM-0728 Region I)
+    r = 71.12  -> 73.66 cm:    downcomer salt (TM-0728 Region F)
+    r = 73.66  -> 75.08 cm:    reactor vessel wall (INOR-8, 1.42 cm)
+
+    Axially, the core can spans the active core height (-half_h to +half_h).
+    Above and below it, the upper plenum and lower head extend to the
+    vacuum boundaries; no can section is modeled inside the heads because
+    TM-0728 Table 3.1 shows region I (core can) bounded by 0 to 65.53 in,
+    matching the active core.
+
+    Expected k-eff delta vs het_lh: roughly -200 to -500 pcm. The INOR-8
+    is a parasitic absorber at the radial boundary, where leaking thermal
+    neutrons would otherwise reflect off salt and return to the core.
+    """
+    half_h = ACTIVE_CORE_HEIGHT / 2.0
+
+    core_bot   = openmc.ZPlane(-half_h, name="active_core_bottom")
+    core_top   = openmc.ZPlane(+half_h, name="active_core_top")
+    core_outer = openmc.ZCylinder(r=CORE_RADIUS,  name="core_cylinder")
+    can_inner  = openmc.ZCylinder(r=CORE_CAN_IR,  name="core_can_inner")
+    can_outer  = openmc.ZCylinder(r=CORE_CAN_OR,  name="core_can_outer")
+
+    vessel_inner = openmc.ZCylinder(r=VESSEL_ID,  name="vessel_inner")
+    vessel_outer = openmc.ZCylinder(r=VESSEL_OR,  name="vessel_outer",
+                                    boundary_type="vacuum")
+    vessel_bot   = openmc.ZPlane(-half_h - PLENUM_HEIGHT,
+                                 name="vessel_bottom", boundary_type="vacuum")
+    vessel_top   = openmc.ZPlane(+half_h + PLENUM_HEIGHT,
+                                 name="vessel_top",    boundary_type="vacuum")
+
+    lattice = _build_core_lattice(mats)
+
+    # Graphite lattice inside the core cylinder (r < 70.168 cm)
+    lattice_cell = openmc.Cell(
+        name="core_lattice_cell",
+        fill=lattice,
+        region=(-core_outer & +core_bot & -core_top),
+    )
+
+    # Thin salt film between lattice edge and core can inner wall
+    salt_film = openmc.Cell(
+        name="core_can_inner_salt_film",
+        fill=mats["salt"],
+        region=(+core_outer & -can_inner & +core_bot & -core_top),
+    )
+
+    # Core can: INOR-8 cylindrical shell (TM-0728 Region I)
+    core_can = openmc.Cell(
+        name="core_can",
+        fill=mats["inor"],
+        region=(+can_inner & -can_outer & +core_bot & -core_top),
+    )
+
+    # True downcomer: salt annulus from can OD to vessel ID (TM-0728 Region F)
+    downcomer_cell = openmc.Cell(
+        name="core_downcomer",
+        fill=mats["salt"],
+        region=(+can_outer & -vessel_inner & +core_bot & -core_top),
+    )
+
+    upper_plenum = openmc.Cell(
+        name="upper_plenum",
+        fill=mats["salt"],
+        region=(-vessel_inner & +core_top & -vessel_top),
+    )
+
+    # Lower head: 90.8 % salt / 9.2 % INOR-8 by volume.
+    lower_head = openmc.Cell(
+        name="lower_head_mix",
+        fill=mats["lower_head_mix"],
+        region=(-vessel_inner & -core_bot & +vessel_bot),
+    )
+
+    vessel_wall = openmc.Cell(
+        name="vessel_wall",
+        fill=mats["inor"],
+        region=(+vessel_inner & -vessel_outer
+                & +vessel_bot & -vessel_top),
+    )
+
+    root = openmc.Universe(cells=[
+        lattice_cell, salt_film, core_can, downcomer_cell,
+        upper_plenum, lower_head, vessel_wall,
+    ])
+    return openmc.Geometry(root), []
+
+
+def build_geometry_het_rods_out(mats: Dict[str, openmc.Material]):
+    """
+    Phase 1.1.c step 3: het_can + four explicit control rod thimbles in the
+    fully-withdrawn position (rods parked above the active core).
+
+    Layout (ORNL-TM-0728 §4.1, Fig 3.2; Shen et al. 2021 Fig 2)
+    -----------------------------------------------------------
+    A 2x2 square array of vertical thimbles centered at
+        (+/-7.62, +/-7.62) cm    (ROD_ARRAY_OFFSET = 1.5 * stringer pitch)
+    Three positions hold cadmium-loaded control rods (Gd2O3/Al2O3 poison)
+    and one holds the sample basket. For step 3 all four positions are
+    treated as plain INOR-8 thimbles with a salt-filled bore — the rods
+    are fully withdrawn, so the active core sees only the structural
+    tube + salt bore (no poison present in the active region).
+
+    Each thimble:
+        OD = 5.08 cm  (2.00 in, ORNL-TM-0728 §4.1)
+        wall = 0.254 cm (0.10 in)
+        bore: salt-filled
+
+    The thimbles span the full vessel height (active core + lower head +
+    upper plenum). Inside the lower head mix region the thimble shell
+    sits in salt/INOR-8 mix; inside the core lattice region the thimble
+    bodies are explicitly excluded from the graphite lattice cell.
+
+    Expected k-eff delta vs het_can: roughly -100 to -200 pcm. Empty
+    INOR-8 thimbles still absorb some thermal neutrons, and replacing
+    ~4 stringer-cell volumes of graphite + salt with steel + bore salt
+    perturbs the local moderation slightly.
+    """
+    half_h = ACTIVE_CORE_HEIGHT / 2.0
+
+    core_bot   = openmc.ZPlane(-half_h, name="active_core_bottom")
+    core_top   = openmc.ZPlane(+half_h, name="active_core_top")
+    core_outer = openmc.ZCylinder(r=CORE_RADIUS,  name="core_cylinder")
+    can_inner  = openmc.ZCylinder(r=CORE_CAN_IR,  name="core_can_inner")
+    can_outer  = openmc.ZCylinder(r=CORE_CAN_OR,  name="core_can_outer")
+
+    vessel_inner = openmc.ZCylinder(r=VESSEL_ID,  name="vessel_inner")
+    vessel_outer = openmc.ZCylinder(r=VESSEL_OR,  name="vessel_outer",
+                                    boundary_type="vacuum")
+    vessel_bot   = openmc.ZPlane(-half_h - PLENUM_HEIGHT,
+                                 name="vessel_bottom", boundary_type="vacuum")
+    vessel_top   = openmc.ZPlane(+half_h + PLENUM_HEIGHT,
+                                 name="vessel_top",    boundary_type="vacuum")
+
+    # Four thimble positions: 2x2 array at (+/-ROD_ARRAY_OFFSET, +/-ROD_ARRAY_OFFSET).
+    thimble_positions = [
+        (+ROD_ARRAY_OFFSET, +ROD_ARRAY_OFFSET),
+        (+ROD_ARRAY_OFFSET, -ROD_ARRAY_OFFSET),
+        (-ROD_ARRAY_OFFSET, +ROD_ARRAY_OFFSET),
+        (-ROD_ARRAY_OFFSET, -ROD_ARRAY_OFFSET),
+    ]
+
+    # Build the thimble surface pairs and the union region used to carve them
+    # out of every cell they pass through.
+    thimble_outer_surfs = []
+    thimble_inner_surfs = []
+    for i, (x, y) in enumerate(thimble_positions):
+        thimble_outer_surfs.append(
+            openmc.ZCylinder(x0=x, y0=y, r=THIMBLE_OR,
+                             name=f"thimble_{i}_outer")
+        )
+        thimble_inner_surfs.append(
+            openmc.ZCylinder(x0=x, y0=y, r=THIMBLE_IR,
+                             name=f"thimble_{i}_inner")
+        )
+
+    # "outside all four thimbles" region (used to subtract from background cells).
+    outside_thimbles = (+thimble_outer_surfs[0]
+                        & +thimble_outer_surfs[1]
+                        & +thimble_outer_surfs[2]
+                        & +thimble_outer_surfs[3])
+
+    lattice = _build_core_lattice(mats)
+
+    # Graphite lattice inside the core cylinder, minus the four thimble shafts.
+    lattice_cell = openmc.Cell(
+        name="core_lattice_cell",
+        fill=lattice,
+        region=(-core_outer & +core_bot & -core_top & outside_thimbles),
+    )
+
+    # Thin salt film between lattice edge and core can inner wall (minus thimbles
+    # — the thimbles are at r ~ 7.62 cm, well inside this region, so the film is
+    # untouched, but we apply the carve for safety in case of future geometry edits).
+    salt_film = openmc.Cell(
+        name="core_can_inner_salt_film",
+        fill=mats["salt"],
+        region=(+core_outer & -can_inner & +core_bot & -core_top
+                & outside_thimbles),
+    )
+
+    # Core can: INOR-8 cylindrical shell (TM-0728 Region I)
+    core_can = openmc.Cell(
+        name="core_can",
+        fill=mats["inor"],
+        region=(+can_inner & -can_outer & +core_bot & -core_top),
+    )
+
+    # True downcomer: salt annulus from can OD to vessel ID (TM-0728 Region F)
+    downcomer_cell = openmc.Cell(
+        name="core_downcomer",
+        fill=mats["salt"],
+        region=(+can_outer & -vessel_inner & +core_bot & -core_top),
+    )
+
+    # Upper plenum: salt + thimble shafts continuing up
+    upper_plenum = openmc.Cell(
+        name="upper_plenum",
+        fill=mats["salt"],
+        region=(-vessel_inner & +core_top & -vessel_top & outside_thimbles),
+    )
+
+    # Lower head mix: salt+INOR-8 mix, with thimble shafts continuing down
+    lower_head = openmc.Cell(
+        name="lower_head_mix",
+        fill=mats["lower_head_mix"],
+        region=(-vessel_inner & -core_bot & +vessel_bot & outside_thimbles),
+    )
+
+    vessel_wall = openmc.Cell(
+        name="vessel_wall",
+        fill=mats["inor"],
+        region=(+vessel_inner & -vessel_outer
+                & +vessel_bot & -vessel_top),
+    )
+
+    # Explicit thimble cells: INOR-8 shell + salt bore, full vessel height.
+    thimble_cells = []
+    for i, _ in enumerate(thimble_positions):
+        bore = openmc.Cell(
+            name=f"thimble_{i}_bore_salt",
+            fill=mats["salt"],
+            region=(-thimble_inner_surfs[i] & +vessel_bot & -vessel_top),
+        )
+        shell = openmc.Cell(
+            name=f"thimble_{i}_shell",
+            fill=mats["inor"],
+            region=(+thimble_inner_surfs[i] & -thimble_outer_surfs[i]
+                    & +vessel_bot & -vessel_top),
+        )
+        thimble_cells += [bore, shell]
+
+    root = openmc.Universe(cells=[
+        lattice_cell, salt_film, core_can, downcomer_cell,
+        upper_plenum, lower_head, vessel_wall,
+        *thimble_cells,
     ])
     return openmc.Geometry(root), []
 

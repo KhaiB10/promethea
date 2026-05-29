@@ -64,14 +64,46 @@ Expected cumulative effect: ~-2000 pcm (negative) bringing v1 down from ~1.04-1.
 
 ---
 
-## What's still missing (and how to get it)
+## Dimensions resolved from ORNL-TM-0728 (MSRE Design Report Part III)
 
-1. **Thimble OD/ID and radial position** — Need IRPhE benchmark report itself (OSTI 1617123) or the original ORNL-TM design report. The Berkeley/eScholarship thesis may contain reproduced tables.
-2. **Core barrel thickness** — Same sources.
-3. **Sample basket radial position and axial extent** — Same sources.
-4. **Lower head axial extent** — Yilmaz's CAD-truncated CSG model has this. Fratoni 2023 slide may also.
+Table 3.1 of TM-0728 (the canonical 20-region core model) gives the IRPhE benchmark dimensions in inches. Converted to cm:
 
-These are not blockers for Phase 1.1.c start — we can model the four features with reasonable estimates, then refine when the IRPhE table is in hand. The dominant effect is presence vs absence, not exact dimension.
+| Region | Inner r (cm) | Outer r (cm) | Bottom z (in) | Top z (in) | Composition (vol %) | Identity |
+|---|---:|---:|---:|---:|---|---|
+| F | 71.12  | 73.66  | 0.00    | 67.47 | 100 % fuel | Downcomer (salt annulus) |
+| I | 70.485 | 71.12  | 0.00    | 65.53 | 100 % INOR-8 | **Core can** (0.25 in / 0.635 cm wall) |
+| B | 73.66  | 75.08  | -9.14   | 74.92 | 100 % INOR-8 | Vessel side wall (0.56 in / 1.42 cm) |
+| P | 0      | 73.66  | -9.14   | -1.41 | 90.8 % fuel / 9.2 % INOR-8 | **Bottom head mix** (already in v1c-lh) |
+| K | 7.37   | 7.62   | -1.41   | 74.92 | 100 % INOR-8 | Simulated thimble annulus (homogenized) |
+
+Key conclusions:
+- **Core can: 70.485 cm ID, 71.12 cm OD, 0.635 cm wall, 166.45 cm height.**
+- Salt gap between graphite outer (70.168 cm) and core can inner (70.485 cm) is only 0.317 cm — a thin film, neutronically negligible but the geometry needs to handle it.
+- Vessel inner radius confirmed at 73.66 cm (29 in), wall 1.42 cm (0.56 in).
+- Bottom head composition 90.8/9.2 confirmed exactly — step 1 lower-head mix is the right number.
+
+## Control rod geometry (ORNL-TM-0728 §4.1, Shen Fig 2)
+
+- **Poison cylinder: 1.08 in OD × 0.12 in wall = 2.743 cm OD, 0.305 cm wall, hollow.**
+- Material: 70 wt % Gd2O3 + 30 wt % Al2O3 ceramic.
+- INOR-8 thimble (clads the poison): individual thimble dimensions implied by the homogenized equivalent (6.00 in OD × 0.10 in thick annulus at r = 2.90-3.00 in homogenizes all three thimbles' INOR-8 mass + outside surface).
+- **Three control rod thimbles + one graphite sample basket arranged as a 2×2 square array** centered on the reactor centerline (Fig 3.2, Shen Fig 2).
+- Each array position occupies a full graphite-stringer lattice cell (5.08 cm pitch).
+- Withdrawn z = 129.54 cm; inserted (criticality) z = 118.364 cm (4.4 in inserted).
+
+## Sample basket geometry (Shen Fig 2)
+
+- 3 sample baskets occupying the fourth position of the 2×2 array (same lattice cell as a control rod would).
+- Per basket: 4 INOR-8 rods (0.635 cm dia) + 5 graphite bars (0.635 × 1.1938 cm).
+- All three baskets sit inside one 5.08 cm lattice cell.
+
+## What's still ambiguous
+
+1. **2×2 array spacing**: 1 pitch (5.08 cm) vs 2 pitches (10.16 cm) center-to-center. Need higher-res view of Fig 3.2 or the IRPhE handbook.
+2. **Sample basket axial extent**: estimate full active core height as first cut.
+3. **Thimble extension above active core**: thimbles extend up to the access port; first cut, terminate at the upper plenum boundary.
+
+None of these are blockers — reasonable defaults can land step 2 and step 3, and the dominant effect (presence vs absence) is captured.
 
 ---
 
