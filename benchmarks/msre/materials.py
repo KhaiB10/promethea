@@ -277,7 +277,16 @@ def build_sample_basket_mix(temperature_K: float = BENCHMARK_TEMP_K,
 
     base_salt = build_fuel_salt_irphe(temperature_K)
     base_inor = build_inor8(temperature_K)
-    base_graf = build_graphite(temperature_K)
+    # Build a graphite copy WITHOUT the S(a,b) table for the mix step.
+    # openmc.Material.mix_materials refuses to mix materials carrying S(a,b)
+    # tables. We re-attach c_Graphite on the resulting homogenized mix so the
+    # carbon nuclides still see graphite thermal scattering kernels.
+    base_graf = openmc.Material(name="MSRE CGB graphite (no S(a,b), for mixing)")
+    base_graf.temperature = temperature_K
+    base_graf.set_density("g/cm3", 1.87)
+    base_graf.add_element("C", 0.9999997)
+    base_graf.add_nuclide("B10", 0.06e-6)
+    base_graf.add_nuclide("B11", 0.24e-6)
     mix = openmc.Material.mix_materials(
         [base_salt, base_inor, base_graf],
         [salt_vol_frac, inor_vol_frac, graphite_vol_frac],
@@ -288,6 +297,7 @@ def build_sample_basket_mix(temperature_K: float = BENCHMARK_TEMP_K,
                 f"{inor_vol_frac*100:.1f}% INOR-8 / "
                 f"{graphite_vol_frac*100:.1f}% graphite)")
     mix.temperature = temperature_K
+    mix.add_s_alpha_beta("c_Graphite")
     return mix
 
 
