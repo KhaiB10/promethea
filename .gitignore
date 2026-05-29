@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# OpenMC outputs
+*.h5
+statepoint.*.h5
+summary.h5
+tallies.out
+*.xml.bak
+
+# MOOSE / Griffin outputs
+*.e
+*.exo
+peacock_run_tmp/
+
+# OpenFOAM
+processor*/
+*.OpenFOAM
+postProcessing/
+
+# Logs and scratch
+*.log
+scratch/
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,21 @@
+name: promethea
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - jupyterlab
+  - h5py
+  - pyyaml
+  - ruff
+  - pytest
+  # OpenMC is best installed via conda-forge
+  - openmc
+  - pip
+  - pip:
+      - gymnasium
+      - stable-baselines3
+      - tqdm
