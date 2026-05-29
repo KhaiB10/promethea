@@ -84,7 +84,7 @@ jobs:
           sudo chmod -R a+rX data/xs
           # Also ensure the working tree is writeable so OpenMC can write
           # statepoint files back to the host through the bind mount.
-          mkdir -p sims/openmc out
+          mkdir -p sims/openmc out out/plots out/plot_run
           sudo chmod -R a+rwX sims out
 
       # ---- 2. Build Docker image (with layer cache) -----------------------
