@@ -83,6 +83,18 @@ POISON_WALL         = 0.305         # 0.12 in
 POISON_OR           = POISON_OD / 2.0
 POISON_IR           = POISON_OR - POISON_WALL
 
+# Control-rod axial positions (ORNL-TM-0728, Shen et al. 2021).
+# TM-0728 datum: z = 0 at core bottom; active core extends 0 -> 65.53 in =
+# 0 -> 166.45 cm. Our model places z = 0 at the *center* of the active core,
+# so TM-0728 z must be shifted by -ACTIVE_CORE_HEIGHT/2 = -83.225 cm to land
+# in our datum.
+# - All three rods fully withdrawn:  rod tip at TM-0728 z = 129.54 cm
+#                                    -> our z = +46.315 cm
+# - One rod inserted 4.4 in:         rod tip at TM-0728 z = 118.364 cm
+#                                    -> our z = +35.139 cm
+ROD_TIP_WITHDRAWN_Z = 129.54 - (ACTIVE_CORE_HEIGHT / 2.0)  # +46.315 cm
+ROD_TIP_INSERTED_Z  = 118.364 - (ACTIVE_CORE_HEIGHT / 2.0) # +35.139 cm
+
 # 2x2 control rod array layout (ORNL-TM-0728 Fig 3.2, Shen Fig 2).
 # Three control rod thimbles and one sample basket are arranged in a
 # square 2x2 pattern around the reactor centerline. Each position sits
@@ -851,6 +863,225 @@ def build_geometry_het_baskets(mats: Dict[str, openmc.Material]):
             )
             thimble_cells += [basket_active, basket_below, basket_above]
         else:
+            bore = openmc.Cell(
+                name=f"thimble_{i}_bore_salt",
+                fill=mats["salt"],
+                region=(-thimble_inner_surfs[i] & +vessel_bot & -vessel_top),
+            )
+            thimble_cells.append(bore)
+
+    root = openmc.Universe(cells=[
+        lattice_cell, salt_film, core_can, downcomer_cell,
+        upper_plenum, lower_head, vessel_wall,
+        *thimble_cells,
+    ])
+    return openmc.Geometry(root), []
+
+
+def build_geometry_het_critical(mats: Dict[str, openmc.Material]):
+    """
+    Phase 1.1.c step 5: full IRPhE first-criticality configuration.
+
+    Differences from het_baskets:
+      - 2 control rod thimbles (positions 0, 1) are plain salt-bore (rods
+        fully withdrawn -- poison parked above the active core where it has
+        negligible effect; tip at TM-0728 z = 129.54 cm, our z = +46.315 cm,
+        i.e. only slightly above core center where the lattice still acts as
+        a moderator. The IRPhE Serpent model approximates these withdrawn
+        rods as simply absent, so we do the same: empty salt-bore thimbles).
+      - 1 control rod thimble (position 2) has the rod inserted 4.4 inches
+        below its withdrawn position. Poison tip at TM-0728 z = 118.364 cm
+        = our z = +35.139 cm. Poison cylinder extends from the tip upward.
+      - 1 sample basket assembly (position 3, same as het_baskets).
+
+    Inserted rod model (per ORNL-TM-0728 sec 4.1, Shen et al. 2021):
+      - Hollow Gd2O3/Al2O3 70/30 wt%% poison cylinder:
+            OD = 2.743 cm (1.08 in)
+            wall = 0.305 cm (0.12 in)
+            ID = 2.133 cm
+      - Inconel-600 cladding around the poison column (modeled as an
+        annulus from poison_OR to thimble_IR; conservative simplification
+        of the real flexible-hose construction).
+      - Inside the poison ID: salt (the bushing has a hollow center).
+      - The poison column extends from the tip elevation up to the top
+        of the vessel; in the inserted configuration the upper boundary
+        is approximated as the vessel top.
+
+    Expected k-eff delta vs het_baskets: roughly -1000 to -1500 pcm.
+    The single inserted Gd2O3 poison rod is the largest single negative
+    reactivity contributor in the entire benchmark. If the previous
+    steps land near 1.04-1.06, this step should bring k toward the
+    IRPhE Serpent target of 1.02132.
+    """
+    half_h = ACTIVE_CORE_HEIGHT / 2.0
+
+    core_bot   = openmc.ZPlane(-half_h, name="active_core_bottom")
+    core_top   = openmc.ZPlane(+half_h, name="active_core_top")
+    core_outer = openmc.ZCylinder(r=CORE_RADIUS,  name="core_cylinder")
+    can_inner  = openmc.ZCylinder(r=CORE_CAN_IR,  name="core_can_inner")
+    can_outer  = openmc.ZCylinder(r=CORE_CAN_OR,  name="core_can_outer")
+
+    vessel_inner = openmc.ZCylinder(r=VESSEL_ID,  name="vessel_inner")
+    vessel_outer = openmc.ZCylinder(r=VESSEL_OR,  name="vessel_outer",
+                                    boundary_type="vacuum")
+    vessel_bot   = openmc.ZPlane(-half_h - PLENUM_HEIGHT,
+                                 name="vessel_bottom", boundary_type="vacuum")
+    vessel_top   = openmc.ZPlane(+half_h + PLENUM_HEIGHT,
+                                 name="vessel_top",    boundary_type="vacuum")
+
+    # Position 2 is the inserted rod; position 3 is the sample basket.
+    # The choice is arbitrary by 4-fold symmetry; pick adjacent corners so
+    # the inserted rod and basket are not diagonally opposite (closer to
+    # the IRPhE figure arrangement).
+    thimble_positions = [
+        (+ROD_ARRAY_OFFSET, +ROD_ARRAY_OFFSET),   # 0: withdrawn
+        (+ROD_ARRAY_OFFSET, -ROD_ARRAY_OFFSET),   # 1: withdrawn
+        (-ROD_ARRAY_OFFSET, +ROD_ARRAY_OFFSET),   # 2: inserted 4.4 in
+        (-ROD_ARRAY_OFFSET, -ROD_ARRAY_OFFSET),   # 3: sample basket
+    ]
+    INSERTED_INDEX = 2
+    BASKET_INDEX   = 3
+
+    thimble_outer_surfs = []
+    thimble_inner_surfs = []
+    for i, (x, y) in enumerate(thimble_positions):
+        thimble_outer_surfs.append(
+            openmc.ZCylinder(x0=x, y0=y, r=THIMBLE_OR,
+                             name=f"thimble_{i}_outer")
+        )
+        thimble_inner_surfs.append(
+            openmc.ZCylinder(x0=x, y0=y, r=THIMBLE_IR,
+                             name=f"thimble_{i}_inner")
+        )
+
+    # Poison cylinder (for the single inserted rod): outer & inner radii.
+    px, py = thimble_positions[INSERTED_INDEX]
+    poison_outer_surf = openmc.ZCylinder(x0=px, y0=py, r=POISON_OR,
+                                         name="poison_outer")
+    poison_inner_surf = openmc.ZCylinder(x0=px, y0=py, r=POISON_IR,
+                                         name="poison_inner")
+    poison_tip_plane  = openmc.ZPlane(ROD_TIP_INSERTED_Z,
+                                      name="poison_tip")
+
+    outside_thimbles = (+thimble_outer_surfs[0]
+                        & +thimble_outer_surfs[1]
+                        & +thimble_outer_surfs[2]
+                        & +thimble_outer_surfs[3])
+
+    lattice = _build_core_lattice(mats)
+
+    lattice_cell = openmc.Cell(
+        name="core_lattice_cell",
+        fill=lattice,
+        region=(-core_outer & +core_bot & -core_top & outside_thimbles),
+    )
+
+    salt_film = openmc.Cell(
+        name="core_can_inner_salt_film",
+        fill=mats["salt"],
+        region=(+core_outer & -can_inner & +core_bot & -core_top
+                & outside_thimbles),
+    )
+
+    core_can = openmc.Cell(
+        name="core_can",
+        fill=mats["inor"],
+        region=(+can_inner & -can_outer & +core_bot & -core_top),
+    )
+
+    downcomer_cell = openmc.Cell(
+        name="core_downcomer",
+        fill=mats["salt"],
+        region=(+can_outer & -vessel_inner & +core_bot & -core_top),
+    )
+
+    upper_plenum = openmc.Cell(
+        name="upper_plenum",
+        fill=mats["salt"],
+        region=(-vessel_inner & +core_top & -vessel_top & outside_thimbles),
+    )
+
+    lower_head = openmc.Cell(
+        name="lower_head_mix",
+        fill=mats["lower_head_mix"],
+        region=(-vessel_inner & -core_bot & +vessel_bot & outside_thimbles),
+    )
+
+    vessel_wall = openmc.Cell(
+        name="vessel_wall",
+        fill=mats["inor"],
+        region=(+vessel_inner & -vessel_outer
+                & +vessel_bot & -vessel_top),
+    )
+
+    thimble_cells = []
+    for i, _ in enumerate(thimble_positions):
+        # Shell is INOR-8 over the full vessel height.
+        shell = openmc.Cell(
+            name=f"thimble_{i}_shell",
+            fill=mats["inor"],
+            region=(+thimble_inner_surfs[i] & -thimble_outer_surfs[i]
+                    & +vessel_bot & -vessel_top),
+        )
+        thimble_cells.append(shell)
+
+        if i == INSERTED_INDEX:
+            # Below the poison tip: pure salt fills the entire bore.
+            below_tip = openmc.Cell(
+                name=f"thimble_{i}_bore_below_tip",
+                fill=mats["salt"],
+                region=(-thimble_inner_surfs[i]
+                        & +vessel_bot & -poison_tip_plane),
+            )
+            # Above the tip: salt outside poison_OD, poison annulus,
+            # salt inside poison_ID.
+            #   inside the bore (r < thimble_IR), above the tip:
+            #     r < poison_IR:      salt (poison is hollow)
+            #     poison_IR < r < poison_OR: Gd2O3/Al2O3 bushing
+            #     poison_OR < r < thimble_IR: Inconel-600 cladding/structure
+            poison_inside = openmc.Cell(
+                name=f"thimble_{i}_poison_inner_salt",
+                fill=mats["salt"],
+                region=(-poison_inner_surf
+                        & +poison_tip_plane & -vessel_top),
+            )
+            poison_annulus = openmc.Cell(
+                name=f"thimble_{i}_poison_bushing",
+                fill=mats["bushing"],
+                region=(+poison_inner_surf & -poison_outer_surf
+                        & +poison_tip_plane & -vessel_top),
+            )
+            poison_outer = openmc.Cell(
+                name=f"thimble_{i}_poison_cladding",
+                fill=mats["inconel"],
+                region=(+poison_outer_surf & -thimble_inner_surfs[i]
+                        & +poison_tip_plane & -vessel_top),
+            )
+            thimble_cells += [below_tip, poison_inside,
+                              poison_annulus, poison_outer]
+
+        elif i == BASKET_INDEX:
+            basket_active = openmc.Cell(
+                name=f"thimble_{i}_bore_basket_mix",
+                fill=mats["sample_basket_mix"],
+                region=(-thimble_inner_surfs[i]
+                        & +core_bot & -core_top),
+            )
+            basket_below = openmc.Cell(
+                name=f"thimble_{i}_bore_below_salt",
+                fill=mats["salt"],
+                region=(-thimble_inner_surfs[i]
+                        & +vessel_bot & -core_bot),
+            )
+            basket_above = openmc.Cell(
+                name=f"thimble_{i}_bore_above_salt",
+                fill=mats["salt"],
+                region=(-thimble_inner_surfs[i]
+                        & +core_top & -vessel_top),
+            )
+            thimble_cells += [basket_active, basket_below, basket_above]
+        else:
+            # Withdrawn rod -> plain salt-bore thimble.
             bore = openmc.Cell(
                 name=f"thimble_{i}_bore_salt",
                 fill=mats["salt"],

@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Geometry mode: homog, het, het_clipped, het_lh, het_can, het_rods_out, het_baskets"
+        description: "Geometry mode: homog, het, het_clipped, het_lh, het_can, het_rods_out, het_baskets, het_critical"
         required: false
         default: "homog"
         type: choice
@@ -32,6 +32,7 @@ on:
           - het_can
           - het_rods_out
           - het_baskets
+          - het_critical
       particles:
         description: "Particles per batch (default 50000; reduce to 10000 for a fast smoke run)"
         required: false
