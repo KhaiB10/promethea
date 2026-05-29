@@ -240,6 +240,97 @@ def build_geometry_het(mats: Dict[str, openmc.Material]):
     return openmc.Geometry(root), []
 
 
+# ---------------------------------------------------------------------------
+# v2 geometry: edge-stringer clipping at the core cylinder
+# ---------------------------------------------------------------------------
+
+def build_geometry_het_clipped(mats: Dict[str, openmc.Material]):
+    """
+    Same heterogeneous MSRE geometry as build_geometry_het, but the lattice
+    is clipped at the core cylinder (r = CORE_RADIUS = 70.168 cm) rather
+    than at the vessel inner radius.
+
+    Why the change
+    --------------
+    In v1 the lattice cell spanned the full vessel-ID cylinder, so every
+    lattice position inside the rectangular grid was either a graphite
+    stringer (if its center sat within 70.168 cm of the axis) or pure
+    salt. Two physical inaccuracies followed:
+
+    1. Edge stringers whose centers sit just inside the core radius
+       extend past r = 70.168 cm. We model them as full 5.08 cm squares,
+       so they over-represent graphite at the radial edge and over-moderate
+       leaking neutrons. Net effect: k-eff biased high by roughly +500 to
+       +1500 pcm (Fratoni sensitivity table).
+
+    2. The radial annulus between r = 70.168 cm and r = vessel_inner
+       (73.66 cm) is the downcomer. In v1 it was filled by the lattice's
+       outer=pure-salt universe, so material was right but the cell
+       boundary did not match the IRPhE benchmark geometry exactly.
+
+    Both are fixed by introducing a core_outer cylinder at CORE_RADIUS
+    and splitting the active-core radial region into
+      - lattice_cell      : inside core_outer
+      - downcomer_cell    : between core_outer and vessel_inner
+    The lattice's outer=salt_uni still handles lattice positions whose
+    cell-center is outside the lattice rectangle but inside the core
+    cylinder (the small slivers at the cylinder edge).
+    """
+    half_h = ACTIVE_CORE_HEIGHT / 2.0
+
+    core_bot   = openmc.ZPlane(-half_h, name="active_core_bottom")
+    core_top   = openmc.ZPlane(+half_h, name="active_core_top")
+    core_outer = openmc.ZCylinder(r=CORE_RADIUS, name="core_cylinder")
+
+    vessel_inner = openmc.ZCylinder(r=VESSEL_ID,  name="vessel_inner")
+    vessel_outer = openmc.ZCylinder(r=VESSEL_OR,  name="vessel_outer",
+                                    boundary_type="vacuum")
+    vessel_bot   = openmc.ZPlane(-half_h - PLENUM_HEIGHT,
+                                 name="vessel_bottom", boundary_type="vacuum")
+    vessel_top   = openmc.ZPlane(+half_h + PLENUM_HEIGHT,
+                                 name="vessel_top",    boundary_type="vacuum")
+
+    lattice = _build_core_lattice(mats)
+
+    # Lattice region: cylinder of CORE_RADIUS, active-core axial extent.
+    lattice_cell = openmc.Cell(
+        name="core_lattice_cell",
+        fill=lattice,
+        region=(-core_outer & +core_bot & -core_top),
+    )
+
+    # Downcomer / radial-reflector annulus, pure salt at active-core height.
+    downcomer_cell = openmc.Cell(
+        name="core_downcomer",
+        fill=mats["salt"],
+        region=(+core_outer & -vessel_inner & +core_bot & -core_top),
+    )
+
+    upper_plenum = openmc.Cell(
+        name="upper_plenum",
+        fill=mats["salt"],
+        region=(-vessel_inner & +core_top & -vessel_top),
+    )
+    lower_plenum = openmc.Cell(
+        name="lower_plenum",
+        fill=mats["salt"],
+        region=(-vessel_inner & -core_bot & +vessel_bot),
+    )
+
+    vessel_wall = openmc.Cell(
+        name="vessel_wall",
+        fill=mats["inor"],
+        region=(+vessel_inner & -vessel_outer
+                & +vessel_bot & -vessel_top),
+    )
+
+    root = openmc.Universe(cells=[
+        lattice_cell, downcomer_cell,
+        upper_plenum, lower_plenum, vessel_wall,
+    ])
+    return openmc.Geometry(root), []
+
+
 # Re-export geometry constants under canonical names for convenience.
 ACTIVE_CORE_HEIGHT_HET = ACTIVE_CORE_HEIGHT
 CORE_RADIUS_HET = CORE_RADIUS

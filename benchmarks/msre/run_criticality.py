@@ -59,6 +59,7 @@ from materials import build_all, BENCHMARK_TEMP_K            # noqa: E402
 from geometry import build_geometry, ACTIVE_CORE_HEIGHT, CORE_RADIUS  # noqa: E402
 from geometry_het import (                                    # noqa: E402
     build_geometry_het,
+    build_geometry_het_clipped,
     ACTIVE_CORE_HEIGHT_HET,
     CORE_RADIUS_HET,
 )
@@ -66,17 +67,22 @@ from geometry_het import (                                    # noqa: E402
 
 # Acceptance envelopes per mode.
 ENVELOPE = {
-    "homog": (1.00, 1.15, "homogenized v0"),
-    "het":   (0.98, 1.05, "heterogeneous v1 (rods withdrawn, IRPhE salt)"),
+    "homog":       (1.00, 1.15, "homogenized v0"),
+    "het":         (0.98, 1.05, "heterogeneous v1 (rods withdrawn, IRPhE salt)"),
+    "het_clipped": (0.98, 1.05, "heterogeneous v1c (edge stringers clipped at core cylinder)"),
 }
 
 
-def build_model(quick: bool = False, het: bool = False) -> openmc.Model:
-    mode = "het" if het else "homog"
-    mats_dict, mats = build_all(temperature_K=BENCHMARK_TEMP_K, irphe=het)
+def build_model(quick: bool = False, mode: str = "homog") -> openmc.Model:
+    irphe = mode in ("het", "het_clipped")
+    mats_dict, mats = build_all(temperature_K=BENCHMARK_TEMP_K, irphe=irphe)
 
-    if het:
+    if mode == "het":
         geometry, extra_mats = build_geometry_het(mats_dict)
+        core_radius = CORE_RADIUS_HET
+        active_h    = ACTIVE_CORE_HEIGHT_HET
+    elif mode == "het_clipped":
+        geometry, extra_mats = build_geometry_het_clipped(mats_dict)
         core_radius = CORE_RADIUS_HET
         active_h    = ACTIVE_CORE_HEIGHT_HET
     else:
@@ -132,16 +138,21 @@ def main():
                         help="Fast smoke run (fewer batches/particles).")
     parser.add_argument("--het", action="store_true",
                         help="Use heterogeneous lattice geometry + IRPhE salt.")
+    parser.add_argument("--het-clipped", action="store_true",
+                        help="Heterogeneous geometry with edge stringers clipped at core cylinder.")
     args = parser.parse_args()
 
     # Allow CI to pick mode without code edits.
     env_mode = os.environ.get("PROMETHEA_MODE", "").lower()
-    if env_mode == "het":
-        args.het = True
-    elif env_mode == "homog":
-        args.het = False
+    if env_mode in ("het", "het_clipped", "homog"):
+        mode = env_mode
+    elif args.het_clipped:
+        mode = "het_clipped"
+    elif args.het:
+        mode = "het"
+    else:
+        mode = "homog"
 
-    mode = "het" if args.het else "homog"
     lo, hi, label = ENVELOPE[mode]
 
     repo_root = _HERE.parents[1]
@@ -151,8 +162,8 @@ def main():
     run_dir.mkdir(parents=True, exist_ok=True)
     os.chdir(run_dir)
 
-    print(f"[msre_{mode}] Building model (quick={args.quick}, het={args.het}) ...")
-    model = build_model(quick=args.quick, het=args.het)
+    print(f"[msre_{mode}] Building model (quick={args.quick}, mode={mode}) ...")
+    model = build_model(quick=args.quick, mode=mode)
 
     print(f"[msre_{mode}] Running OpenMC in {run_dir} ...")
     sp_path = model.run(output=True)

@@ -20,13 +20,14 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Geometry mode: homog (homogenized v0) or het (heterogeneous v1)"
+        description: "Geometry mode: homog (v0), het (v1), or het_clipped (v1c)"
         required: false
         default: "homog"
         type: choice
         options:
           - homog
           - het
+          - het_clipped
       particles:
         description: "Particles per batch (default 50000; reduce to 10000 for a fast smoke run)"
         required: false
@@ -138,6 +139,7 @@ jobs:
             echo "### Acceptance envelopes"
             echo "- v0 (homogenized) envelope: \`1.00 <= k <= 1.15\`"
             echo "- v1 (heterogeneous, IRPhE salt, rods withdrawn) envelope: \`0.98 <= k <= 1.05\`, target \`~1.020\`"
+            echo "- v1c (het + edge-stringer clipping) envelope: \`0.98 <= k <= 1.05\`, target \`~1.020\`"
             echo "- IRPhE experimental k-eff: \`0.99978\` (rods inserted to critical)"
           } >> "$GITHUB_STEP_SUMMARY"
 
