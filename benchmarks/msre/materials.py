@@ -240,11 +240,12 @@ def build_fuel_salt_irphe(temperature_K: float = BENCHMARK_TEMP_K) -> openmc.Mat
 
     Earlier versions of this function back-solved the UF4 mole fraction from
     the 1.408 wt% target while assuming 33.3 wt% U-235 enrichment, which
-    produced 0.736 mol % UF4 and about 12% less total uranium mass than the
-    real benchmark. The reduction in U-238 mass made the model significantly
-    less parasitic and pushed k-eff several hundred pcm above the published
-    benchmark value. This corrected version uses the IRPhE-canonical numbers
-    directly.
+    produced 0.736 mol % UF4 and about 12% less total uranium mass (and
+    5.5% less U-235) than the real benchmark. A thermal-utilization check
+    shows the net k-eff impact of this correction is small (about +15 to
+    +75 pcm) because the extra U-235 outweighs the extra U-238 absorption.
+    The fix is still worth making for benchmark fidelity, but it is not
+    the dominant contributor to bias in the v1 heterogeneous model.
     """
     salt = openmc.Material(name="MSRE fuel salt (IRPhE first criticality)")
     salt.temperature = temperature_K

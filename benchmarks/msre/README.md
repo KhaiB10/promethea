@@ -105,25 +105,33 @@ All runs executed in GitHub Actions on `ubuntu-latest` (4 vCPU / 16 GB) inside t
 
 | Run | Mode | Particles × batches | k-eff (combined) | σ | Bias vs CSG target 1.020 | CI run ID | Notes |
 |---|---|---|---|---|---|---|---|
-| 1 | het (v1) | 10k × 40 (smoke) | 1.08360 | ±0.00195 | +6360 pcm | [26612501791](https://github.com/KhaiB10/promethea/actions/runs/26612501791) | Geometry validated (no lost particles). First real result. |
-| 2 | het (v1) | 100k × 100 | _in progress_ | | | [26613848308](https://github.com/KhaiB10/promethea/actions/runs/26613848308) | Production-statistics rerun of run 1. |
-| 3 | het (v1) | 100k × 100 | _pending_ | | | _pending_ | Salt composition corrected (31.35 % enr, 0.83 mol % UF₄). Expected −500 to −1000 pcm. |
-| 4 | het_clipped (v1c) | 100k × 100 | _pending_ | | | _pending_ | Edge-stringer clipping at core cylinder. Expected another −500 to −1500 pcm. |
+| 1 | het (v1) | 10k × 40 (smoke) | 1.08360 | ±0.00195 | +6360 pcm vs 1.020 | [26612501791](https://github.com/KhaiB10/promethea/actions/runs/26612501791) | Geometry validated (no lost particles). First real result. **But 1.020 is the wrong target — see bias attribution.** |
+| 2 | het (v1) | 100k × 100 | _in progress_ | | | [26613848308](https://github.com/KhaiB10/promethea/actions/runs/26613848308) | Production-statistics rerun of run 1; confirms run 1 wasn't a stats fluke. |
+| 3 | het (v1) | 100k × 100 | _pending_ | | | _pending_ | Salt composition corrected (31.35 % enr, 0.83 mol % UF₄). Expected +15 to +75 pcm (small). |
+| 4 | het_clipped (v1c) | 100k × 100 | _pending_ | | | _pending_ | Edge-stringer clipping at core cylinder. Expected −500 to −1500 pcm. |
 
 ### Bias attribution (Phase 1.1.b)
 
-Run 1 sat ~6300 pcm above the CSG reference value of 1.020. Likely contributors, in order of expected magnitude (all corrected before run 3 and run 4):
+Run 1 produced k-eff = **1.08360 ± 0.00195**, which sits ~6300 pcm above the published OpenMC CSG reference of 1.020. Before claiming bias contributors, two corrections to the framing:
+
+1. **The right target for v1 is not 1.020.** The published 1.020 result includes the lower-head INOR-8 mix, sample baskets, control rod thimbles, and core barrel. Our v1 model is an idealized graphite-stringer-plus-salt cylinder — simpler than 1.020. Per Yilmaz 2024 the cumulative bias from those simplifications going from 1.02132 down to experiment 0.99978 is about −2100 pcm. So a v1 model with no INOR-8 in the lower head, no sample baskets, no rod thimbles, and no core barrel should land in roughly the **1.04 – 1.06 range** before geometry refinement.
+2. **The salt composition fix is not the biggest lever.** A simple thermal-utilization calculation shows that going from the back-solved 0.736 mol % UF₄ at 33.3 % enrichment to the IRPhE-canonical 0.83 mol % UF₄ at 31.35 % enrichment changes the salt's U-235 absorption-fraction by **+15 to +75 pcm** (slightly higher k, not lower). The 5.5 % more U-235 atoms outweighs the 15 % more U-238 atoms because U-238's effective absorption per atom is much smaller. The fix is still worth making (the composition matches the benchmark exactly) but it is not what closes the bias.
+
+Updated attribution table, ordered by expected magnitude:
 
 | Contributor | Direction | Estimated magnitude | Resolved in |
 |---|---|---|---|
-| Salt composition: back-solved 0.736 mol % UF₄ at 33.3 % enr gave 12 % less total U mass than IRPhE truth (less U-238 parasitic capture) | +k | ~500 – 1000 pcm | Run 3 (corrected to 0.83 mol % UF₄ at 31.35 % enr) |
-| Edge stringers as full 5.08 cm squares rather than clipped at the core cylinder (over-moderation) | +k | ~500 – 1500 pcm | Run 4 (geometry_het_clipped) |
-| Control rods all withdrawn (no thimbles in core) | +k | ~200 – 500 pcm | Phase 1.1.c |
-| Sample basket assemblies not modeled | +k | ~50 – 150 pcm | Phase 1.1.c |
-| Axial taper of stringer ends simplified | small | <100 pcm | Phase 1.1.c |
+| **Wrong target** — our v1 is simpler than the 1.020 published model | ~ +2000 – +2500 pcm of "apparent" bias | (framing fix) | This README, no code change |
+| Edge stringers as full 5.08 cm squares rather than clipped at the core cylinder (over-moderation at the radial edge) | +k | +500 – +1500 pcm | Run 4 (`geometry_het_clipped`) |
+| Control rod thimbles (3 INOR-8 + air-gap regions) replaced by graphite in v1 | +k | +200 – +500 pcm | Phase 1.1.c |
+| Sample basket assemblies and surveillance specimens not modeled | +k | +100 – +400 pcm | Phase 1.1.c |
+| Lower head modeled as pure salt instead of 85 % salt / 15 % INOR-8 (Yilmaz CAD value) | +k | +200 – +400 pcm | Phase 1.1.c |
+| Core barrel INOR-8 cylinder at r = 71.12 cm not modeled (currently the downcomer is pure salt) | +k | +50 – +150 pcm | Phase 1.1.c |
+| Axial taper of stringer ends simplified to flat boundary | small | <100 pcm | Phase 1.1.c |
+| Salt composition (0.736 mol % UF₄ at 33.3 % enr  →  0.83 mol % at 31.35 % enr) | −k ·… actually +k | +15 – +75 pcm (small, positive) | Run 3 |
 | Cross-section library (we use VIII.0; literature uses VII.1) | ± | tens of pcm | (data choice) |
 
-If this attribution holds, run 4 should land somewhere in the 1.05 – 1.07 range, putting us 3000 – 5000 pcm closer to the CSG target with two well-identified residual sources (rods + sample baskets) to close in Phase 1.1.c.
+The single largest item is the framing correction: roughly 2000 pcm of the apparent gap is "we are not the same model as the 1.020 result." The real v1 target after all *physical* corrections in Phase 1.1.b should be around **1.04 – 1.06**. Closing the rest to 1.020 is Phase 1.1.c work (rods, baskets, lower-head mixing, core barrel).
 
 ## Status
 
