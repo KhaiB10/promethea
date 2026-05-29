@@ -140,20 +140,40 @@ lower_head_mix.add_mix(fuel_salt, 0.85, inor8, 0.15, frac_type='vo')
 
 ---
 
-## Expected bias breakdown (revised)
+## Measured staging results (100k particles × 100 batches, ENDF/B-VIII.0)
 
-| Step | Feature added | Estimated Δρ (pcm) | Cumulative k-eff |
+| Stage | CI run | k-effective | Δ from prior (pcm) |
 |---|---|---|---|
-| Phase 1.1.b het v1 | (baseline) | 0 | ~1.04-1.06 (TBD from 100k run) |
-| Phase 1.1.c step 1 | + core barrel (INOR-8) | ~-300 to -600 (absorber + thinner salt downcomer) | — |
-| Phase 1.1.c step 2 | + lower-head 15% INOR-8 mix | ~-100 to -300 (Yilmaz: "more than 100 pcm") | — |
-| Phase 1.1.c step 3 | + sample baskets (INOR-8 + graphite) | ~-100 to -300 (small parasitic absorber) | — |
-| Phase 1.1.c step 4 | + control rod thimbles (1 inserted 4.4 in) | ~-1000 to -1500 (Gd poison is strong) | — |
-| Phase 1.1.c target | | total ~-2000 pcm | ~1.02-1.04 |
+| v1 het baseline | 26613848308 | 1.08264 ± 0.00037 | — |
+| Step 1 — lower-head 90.8/9.2 mix | 26621707352 | 1.07355 ± 0.00038 | −909 |
+| Step 2 — core can (0.635 cm INOR-8) | 26624726160 | 1.07202 ± 0.00041 | −153 |
+| Step 3 — 4 thimbles withdrawn | 26625953930 | 1.02314 ± 0.00037 | **−4888** |
+| Step 4 — + 1 sample basket | 26627021424 | 1.01948 ± 0.00032 | −366 |
+| Step 5 — + 1 rod inserted 4.4 in (full IRPhE) | 26630697473 | **1.01433 ± 0.00038** | −515 |
 
-The control rod insertion dominates. Step 4 should be staged as two sub-cases:
-- **4a**: All three rods fully withdrawn (poison absent from core) — small bias
-- **4b**: One rod inserted 4.4 in (matches IRPhE criticality state) — full ~1.020 target
+Total Phase 1.1.c bias: **−6831 pcm** vs Phase 1.1.b het baseline.
+
+The big swing was step 3 — the four control-rod thimbles displace ~62 cm³ of fuel each over the active core height and the INOR-8 shells are parasitic absorbers. That single feature accounts for **72% of the total Phase 1.1.c bias**, much larger than the original ±100-300 pcm estimate.
+
+## IRPhE benchmark comparison
+
+| Reference | k-eff | Δ from Promethea (pcm) |
+|---|---|---|
+| **Promethea het_critical (this work)** | **1.01433 ± 0.00038** | — |
+| IRPhE Serpent (Shen et al. 2021, current edition) | 1.02132 ± 0.00003 | +699 ± 38 |
+| Shen et al. 2017 OSTI (older edition) | 1.00135 | −1298 ± 38 |
+| Experimental criticality (June 1, 1965, 6:00 PM) | 0.99978 | −1455 ± 38 |
+
+**We are 699 pcm below the published IRPhE Serpent benchmark and 1455 pcm above the experimental value.** The Promethea result sits between the two reference points and is consistent with the well-documented MC overprediction for graphite-moderated systems (typically 1-2%). Closing the remaining 699 pcm to the Serpent target is Phase 1.1.d / Phase 1.2 work — candidate sources of the residual gap, in rough priority order:
+
+1. **Graphite stringer cross-section / channel geometry detail** — our lattice uses an averaged matrix-plus-coolant model rather than the as-built grooved stringer cross-section. Fratoni 2023 reports ~+200-500 pcm sensitivity here.
+2. **B-10 content in CGB graphite** — we used the as-shipped manufacturer value (~0.3 ppm equivalent). IRPhE Serpent inputs may use a different effective ppm; this is worth ~±100-300 pcm.
+3. **Salt density and 7Li enrichment** — we use 99.9926% 7Li (IRPhE spec). Salt density temperature dependence and exact 1965 inventory ratio could shift another ±100-200 pcm.
+4. **Sample basket sub-channel resolution** — we homogenized one basket; explicit modeling of the 4 INOR-8 rods + 5 graphite bars per basket would shift k-eff by ~±50-150 pcm.
+5. **Upper plenum and access-nozzle detail** — our upper plenum is salt-only; real geometry has piping intrusions and a sample insertion port. Sensitivity ~±50 pcm.
+6. **Cross-section library** — we use ENDF/B-VIII.0; some IRPhE Serpent runs use JEFF-3.3 or ENDF/B-VII.1. Library differences typically run ±100-300 pcm for thermal graphite systems.
+
+For the experimental comparison (k = 0.99978), the +1455 pcm Promethea bias is in family with other published MC predictions for MSRE — Shen 2017 reported +157 pcm and Fratoni 2023 reported +1400-2000 pcm depending on stringer treatment. We are within the published spread.
 
 ---
 
