@@ -67,7 +67,7 @@ def main():
     # Plot 1: single stringer unit cell, 5.5 cm window at z = 0
     # ------------------------------------------------------------------ #
     plot1 = openmc.Plot()
-    plot1.filename = str(out_dir / "01_stringer_unit_cell")
+    plot1.filename = "01_stringer_unit_cell"
     plot1.basis = "xy"
     plot1.origin = (0.0, 0.0, 0.0)
     plot1.width = (5.5, 5.5)
@@ -79,7 +79,7 @@ def main():
     # Plot 2: 3x3 lattice tile (3 * 5.08 = 15.24 cm window)
     # ------------------------------------------------------------------ #
     plot2 = openmc.Plot()
-    plot2.filename = str(out_dir / "02_lattice_3x3")
+    plot2.filename = "02_lattice_3x3"
     plot2.basis = "xy"
     plot2.origin = (0.0, 0.0, 0.0)
     plot2.width = (3 * STRINGER_PITCH + 0.5, 3 * STRINGER_PITCH + 0.5)
@@ -91,7 +91,7 @@ def main():
     # Plot 3: full active-core cross-section at z = 0
     # ------------------------------------------------------------------ #
     plot3 = openmc.Plot()
-    plot3.filename = str(out_dir / "03_core_xy_midplane")
+    plot3.filename = "03_core_xy_midplane"
     plot3.basis = "xy"
     plot3.origin = (0.0, 0.0, 0.0)
     plot3.width = (160.0, 160.0)  # vessel OD is ~150 cm, give a margin
@@ -103,7 +103,7 @@ def main():
     # Plot 4: vertical xz cross-section through y = 0
     # ------------------------------------------------------------------ #
     plot4 = openmc.Plot()
-    plot4.filename = str(out_dir / "04_core_xz_y0")
+    plot4.filename = "04_core_xz_y0"
     plot4.basis = "xz"
     plot4.origin = (0.0, 0.0, ACTIVE_CORE_HEIGHT / 2.0)
     plot4.width = (160.0, ACTIVE_CORE_HEIGHT + 80.0)
