@@ -63,6 +63,8 @@ from geometry_het import (                                    # noqa: E402
     build_geometry_het_lh,
     build_geometry_het_can,
     build_geometry_het_rods_out,
+    build_geometry_het_baskets,
+    build_geometry_het_critical,
     ACTIVE_CORE_HEIGHT_HET,
     CORE_RADIUS_HET,
 )
@@ -76,11 +78,13 @@ ENVELOPE = {
     "het_lh":      (0.98, 1.10, "heterogeneous v1c + lower-head mix 90.8/9.2 (Phase 1.1.c step 1)"),
     "het_can":     (0.98, 1.10, "heterogeneous v1c + lower head + INOR-8 core can (Phase 1.1.c step 2)"),
     "het_rods_out":(0.98, 1.10, "het_can + 4 control rod thimbles, rods fully withdrawn (Phase 1.1.c step 3)"),
+    "het_baskets": (0.98, 1.10, "het_rods_out + sample-basket fill at 4th position (Phase 1.1.c step 4)"),
+    "het_critical":(0.98, 1.10, "het_baskets + 1 rod inserted 4.4 in (Phase 1.1.c step 5, IRPhE config)"),
 }
 
 
 def build_model(quick: bool = False, mode: str = "homog") -> openmc.Model:
-    irphe = mode in ("het", "het_clipped", "het_lh", "het_can", "het_rods_out")
+    irphe = mode in ("het", "het_clipped", "het_lh", "het_can", "het_rods_out", "het_baskets", "het_critical")
     mats_dict, mats = build_all(temperature_K=BENCHMARK_TEMP_K, irphe=irphe)
 
     if mode == "het":
@@ -101,6 +105,14 @@ def build_model(quick: bool = False, mode: str = "homog") -> openmc.Model:
         active_h    = ACTIVE_CORE_HEIGHT_HET
     elif mode == "het_rods_out":
         geometry, extra_mats = build_geometry_het_rods_out(mats_dict)
+        core_radius = CORE_RADIUS_HET
+        active_h    = ACTIVE_CORE_HEIGHT_HET
+    elif mode == "het_baskets":
+        geometry, extra_mats = build_geometry_het_baskets(mats_dict)
+        core_radius = CORE_RADIUS_HET
+        active_h    = ACTIVE_CORE_HEIGHT_HET
+    elif mode == "het_critical":
+        geometry, extra_mats = build_geometry_het_critical(mats_dict)
         core_radius = CORE_RADIUS_HET
         active_h    = ACTIVE_CORE_HEIGHT_HET
     else:
@@ -164,12 +176,20 @@ def main():
                         help="het_lh + INOR-8 core can shell (Phase 1.1.c step 2).")
     parser.add_argument("--het-rods-out", action="store_true",
                         help="het_can + 4 control rod thimbles, rods withdrawn (Phase 1.1.c step 3).")
+    parser.add_argument("--het-baskets", action="store_true",
+                        help="het_rods_out + sample-basket fill at 4th position (Phase 1.1.c step 4).")
+    parser.add_argument("--het-critical", action="store_true",
+                        help="het_baskets + 1 rod inserted 4.4 in (Phase 1.1.c step 5, IRPhE configuration).")
     args = parser.parse_args()
 
     # Allow CI to pick mode without code edits.
     env_mode = os.environ.get("PROMETHEA_MODE", "").lower()
-    if env_mode in ("het", "het_clipped", "het_lh", "het_can", "het_rods_out", "homog"):
+    if env_mode in ("het", "het_clipped", "het_lh", "het_can", "het_rods_out", "het_baskets", "het_critical", "homog"):
         mode = env_mode
+    elif args.het_critical:
+        mode = "het_critical"
+    elif args.het_baskets:
+        mode = "het_baskets"
     elif args.het_rods_out:
         mode = "het_rods_out"
     elif args.het_can:

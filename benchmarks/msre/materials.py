@@ -247,6 +247,50 @@ def build_lower_head_mix(temperature_K: float = BENCHMARK_TEMP_K,
     return mix
 
 
+def build_sample_basket_mix(temperature_K: float = BENCHMARK_TEMP_K,
+                            inor_vol_frac: float = 0.0771,
+                            graphite_vol_frac: float = 0.2309,
+                            salt_vol_frac: float = 0.6920) -> openmc.Material:
+    """
+    Homogenized fill for the surveillance / sample basket assembly that
+    occupies the 4th position of the 2x2 control-rod array.
+
+    Per Shen et al. 2021, each sample basket contains:
+      - 4 INOR-8 rods of 0.635 cm diameter
+      - 5 graphite bars of 0.635 cm x 1.1938 cm cross-section
+      - the remainder of the basket bore filled with fuel salt
+
+    Geometry math (bore radius = 2.286 cm, bore cross-section = 16.42 cm^2):
+      INOR-8 contents     :  4 * pi * (0.3175)^2          = 1.267 cm^2 (7.71%)
+      Graphite contents   :  5 * (0.635 * 1.1938)         = 3.791 cm^2 (23.09%)
+      Salt remainder      :                                = 11.36 cm^2 (69.20%)
+
+    The IRPhE Serpent model represents the basket assembly as a single
+    thimble-shaped column whose bore is filled with this homogenized
+    mixture over the active-core axial extent. Above and below the active
+    core the bore reverts to pure salt.
+
+    Source: Shen et al. 2021, IRPhE MSRE-MSR-EXP-001 benchmark, sec. 2.
+    """
+    if abs((inor_vol_frac + graphite_vol_frac + salt_vol_frac) - 1.0) > 1e-4:
+        raise ValueError("sample-basket volume fractions must sum to 1")
+
+    base_salt = build_fuel_salt_irphe(temperature_K)
+    base_inor = build_inor8(temperature_K)
+    base_graf = build_graphite(temperature_K)
+    mix = openmc.Material.mix_materials(
+        [base_salt, base_inor, base_graf],
+        [salt_vol_frac, inor_vol_frac, graphite_vol_frac],
+        "vo",
+    )
+    mix.name = (f"MSRE sample-basket mix "
+                f"({salt_vol_frac*100:.1f}% salt / "
+                f"{inor_vol_frac*100:.1f}% INOR-8 / "
+                f"{graphite_vol_frac*100:.1f}% graphite)")
+    mix.temperature = temperature_K
+    return mix
+
+
 def build_inconel600(temperature_K: float = ROOM_TEMP_K + 65.6) -> openmc.Material:
     """Inconel-600 cladding for the control rods (operates near room temp)."""
     m = openmc.Material(name="Inconel-600")
@@ -344,6 +388,7 @@ def build_all(temperature_K: float = BENCHMARK_TEMP_K, *, irphe: bool = False):
         "bushing":  build_control_bushing(),
         "inconel":  build_inconel600(),
         "lower_head_mix": build_lower_head_mix(temperature_K),
+        "sample_basket_mix": build_sample_basket_mix(temperature_K),
     }
     return mats, openmc.Materials(list(mats.values()))
 
