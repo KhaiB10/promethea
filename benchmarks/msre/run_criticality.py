@@ -212,6 +212,11 @@ def main():
     run_dir.mkdir(parents=True, exist_ok=True)
     os.chdir(run_dir)
 
+    xs_lib = os.environ.get("PROMETHEA_XS_LIBRARY", "")
+    xs_xml = os.environ.get("OPENMC_CROSS_SECTIONS", "")
+    if xs_lib:
+        print(f"[msre_{mode}] xs_library={xs_lib}  OPENMC_CROSS_SECTIONS={xs_xml}")
+
     print(f"[msre_{mode}] Building model (quick={args.quick}, mode={mode}) ...")
     model = build_model(quick=args.quick, mode=mode)
 
