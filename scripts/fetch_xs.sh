@@ -29,6 +29,14 @@ case "$LIB" in
         DIRNAME="endfb-vii.1-hdf5"
         ARCHIVE="endfb-vii.1-hdf5.tar.xz"
         ;;
+    endfb-vii.0)
+        # LANL-processed ENDF/B-VII.0 from openmc.org/data 'LANL-Based
+        # Data Libraries' section. Shen 2021 reports 'ENDF/B-VII' without
+        # a sub-version; this allows testing both VII.0 and VII.1.
+        URL="https://anl.box.com/shared/static/t25g7g6v0emygu50lr2ych1cf6o7454b.xz"
+        DIRNAME="endfb-vii.0-hdf5"
+        ARCHIVE="endfb-vii.0-hdf5.tar.xz"
+        ;;
     jeff-3.3)
         URL="https://anl.box.com/shared/static/4jwkvrr9pxlruuihcrgti75zde6g7bum.xz"
         DIRNAME="jeff-3.3-hdf5"
@@ -36,7 +44,7 @@ case "$LIB" in
         ;;
     *)
         echo "[fetch_xs] Unknown library: $LIB" >&2
-        echo "[fetch_xs] Supported: endfb-viii.0, endfb-vii.1, jeff-3.3" >&2
+        echo "[fetch_xs] Supported: endfb-viii.0, endfb-vii.1, endfb-vii.0, jeff-3.3" >&2
         exit 1
         ;;
 esac
