@@ -406,6 +406,111 @@ literature comparison.
 
 ---
 
+## Phase 1.1.d step 3 — Cross-section library swap
+
+### Why
+
+After Step C (boron) and Step 2 (corner rounding) together account for
+at most ~311 + ~12 pcm ≈ 323 pcm of the 824 pcm Shen-Serpent gap, the
+most-likely-remaining bulk contributor is the evaluated nuclear data
+library itself. Different libraries (ENDF/B-VII.1, ENDF/B-VIII.0,
+JEFF-3.3) reprocess the same underlying ENDF evaluations with
+different thermal scattering laws, resonance treatments, and (for
+some nuclides) updated measurements, leading to 100-500 pcm k-eff
+shifts in published MSRE-class benchmarks.
+
+Shen 2021 does not state the library used. The expectation going in
+was that VII.1 would raise k (closing the gap) since VIII.0 ↔ VII.1
+shifts of +200-400 pcm are common in thermal U-235 systems. The
+result was the opposite, see below.
+
+### Implementation (commit `aa0e8bb`)
+
+- `scripts/fetch_xs.sh` now takes a library key argument and selects
+  the canonical anl.box.com archive URL (verified against the Official
+  Data Libraries section of openmc.org/data, 2025-12 snapshot):
+  - `endfb-viii.0` → `uhbxlrx7hvxqw27psymfbhi7bx7s6u6a.xz`
+  - `endfb-vii.1`  → `9igk353zpy8fn9ttvtrqgzvw1vtejoz6.xz`
+  - `jeff-3.3`     → `4jwkvrr9pxlruuihcrgti75zde6g7bum.xz`
+- Workflow exposes `xs_library` as a `choice` input, threads it through
+  a `Resolve library paths` step (`steps.xs-paths.outputs.xs_xml`) into
+  the cache key, fetch command, plot mode, and run mode.
+- Each library has its own cache key (`<dirname>-v1`) so the three
+  libraries do not evict each other in GHA's per-repo cache budget.
+- Concurrency group keyed on `xs_library` so independent dispatches
+  queue (do not preempt). Artifact name embeds the library tag.
+- `run_criticality.py` logs the active library + `OPENMC_CROSS_SECTIONS`
+  path on startup for forensic confirmation.
+
+### Results (100k × 100, het_critical, B=0.3 ppm, sharp corners)
+
+| Library      | CI run     | k-eff (combined) | σ      | Δk vs VIII.0 |
+|--------------|-----------:|-----------------:|-------:|-------------:|
+| ENDF/B-VIII.0| 26637499678| 1.01308          | 0.00036| —            |
+| ENDF/B-VII.1 | 26673557407| 1.01163          | 0.00038| **−145 ± 52 pcm** |
+| JEFF-3.3     | 26673563595| 1.01485          | 0.00034| **+177 ± 47 pcm** |
+
+Leakage fractions (active batch averages): VII.1 = 0.21921 ± 0.00018,
+JEFF-3.3 = 0.21629 ± 0.00016 (lower leakage in JEFF-3.3 is consistent
+with its higher k).
+
+### Interpretation
+
+1. **VII.1 hypothesis was wrong.** k dropped, didn't rise. Shen-Serpent
+   was almost certainly not using ENDF/B-VII.1, or if it was, other
+   methodology choices in that work compensated.
+2. **JEFF-3.3 closes the most gap of any single library** — 177 pcm,
+   bringing the residual to Shen-Serpent from 824 to 647 pcm.
+3. The full library spread across the three options is only 322 pcm
+   (1.01163 to 1.01485). This bounds the library contribution to the
+   Shen gap from above: **at most ~320 pcm is library choice**.
+
+### Cumulative gap analysis (post-step-3)
+
+| Effect                            | Magnitude (pcm) | Sign | Source            |
+|-----------------------------------|----------------:|------|-------------------|
+| Boron mismatch (1.0 → 0.0 ppm)    |             311 | +    | Step C            |
+| Corner rounding (r=0 → 0.475 cm)  |              12 | +    | Step 2 (null)     |
+| Library swap (VIII.0 → JEFF-3.3)  |             177 | +    | Step 3            |
+| **Cumulative best-case**          |         **500** | +    |                   |
+| Shen-Serpent target gap           |             824 |      |                   |
+| **Stubborn residual**             |         **324** |      | unexplained       |
+
+The three sensitivity studies together can explain at most ~500 pcm
+of 824 pcm (61%). The remaining ~324 pcm is real and must come from
+an effect Phase 1.1.d has not yet audited.
+
+### Recommended canonical library going forward
+
+Keep **ENDF/B-VIII.0 as the production default** — it is the modern
+US standard library, includes ALARA-grade photoatomic data, and has
+the broadest cross-validation against power-reactor and critical-mass
+benchmarks. JEFF-3.3 is a useful cross-check tag for major
+milestones but should not be the everyday baseline.
+
+### Implications for remaining work
+
+The ~324 pcm unexplained residual is now the central Phase 1.1.d
+follow-up. Likely candidates, in priority order:
+
+1. **Thimble centering vs hard-coded 7.62 cm offset** — Shen Fig 2
+   shows thimbles inset slightly differently from the TM-0728 nominal
+   coordinates. A 1-2 cm radial shift on four absorber thimbles can
+   easily move k by 100-300 pcm.
+2. **Horizontal lattice cross section at the bottom of the active core**
+   — TM-0728 §2.6 shows the lattice transitioning to a different
+   stringer pattern in the lower 5 cm. Our model uses uniform vertical
+   stringers; Shen may model the transition.
+3. **Fuel salt composition and density at the Shen reference temperature**
+   — re-derive U-235 enrichment, Zr-to-U ratio, and salt density from
+   TM-0728 Tables 2.4-2.6 directly rather than from our cached values.
+4. **Inconel/INOR-8 thimble cladding thickness** — currently set to
+   the TM-0728 nominal; Shen may use the Fig 2 dimensioned value.
+
+Each is a small geometry/composition audit, not a major refactor.
+
+---
+
 ## Phase order
 
 Recommend implementing in this order:
