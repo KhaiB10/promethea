@@ -13,6 +13,14 @@
 #   endfb-viii.0  -> endfb-viii.0-hdf5/cross_sections.xml
 #   endfb-vii.1   -> endfb-vii.1-hdf5/cross_sections.xml
 #   jeff-3.3      -> jeff-3.3-hdf5/cross_sections.xml
+#
+# NOTE on ENDF/B-VII.0: no first-party OpenMC HDF5 build of VII.0 is
+# published on openmc.org/official-data-libraries. The LANL Box mirror
+# distributes VII.0 only in MCNP/ACE format ('mcnp_endfb70/'), which
+# OpenMC cannot ingest without NJOY -> HDF5 conversion. Shen et al. 2021
+# reports 'ENDF/B-VII' without sub-version; we use VII.1 as the canonical
+# VII-series stand-in. Adding VII.0 support is tracked as future work
+# (see RESEARCH_LOG.md, 2026-05-30 entry).
 set -euo pipefail
 
 LIB="${1:-endfb-viii.0}"
@@ -29,14 +37,6 @@ case "$LIB" in
         DIRNAME="endfb-vii.1-hdf5"
         ARCHIVE="endfb-vii.1-hdf5.tar.xz"
         ;;
-    endfb-vii.0)
-        # LANL-processed ENDF/B-VII.0 from openmc.org/data 'LANL-Based
-        # Data Libraries' section. Shen 2021 reports 'ENDF/B-VII' without
-        # a sub-version; this allows testing both VII.0 and VII.1.
-        URL="https://anl.box.com/shared/static/t25g7g6v0emygu50lr2ych1cf6o7454b.xz"
-        DIRNAME="endfb-vii.0-hdf5"
-        ARCHIVE="endfb-vii.0-hdf5.tar.xz"
-        ;;
     jeff-3.3)
         URL="https://anl.box.com/shared/static/4jwkvrr9pxlruuihcrgti75zde6g7bum.xz"
         DIRNAME="jeff-3.3-hdf5"
@@ -44,7 +44,8 @@ case "$LIB" in
         ;;
     *)
         echo "[fetch_xs] Unknown library: $LIB" >&2
-        echo "[fetch_xs] Supported: endfb-viii.0, endfb-vii.1, endfb-vii.0, jeff-3.3" >&2
+        echo "[fetch_xs] Supported: endfb-viii.0, endfb-vii.1, jeff-3.3" >&2
+        echo "[fetch_xs] (endfb-vii.0 is not available as an OpenMC HDF5 build; see script header)" >&2
         exit 1
         ;;
 esac

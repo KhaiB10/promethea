@@ -111,3 +111,51 @@ cladding thickness, lower-core lattice transition) are now polishing
 work rather than gap-closing work.
 
 ---
+## 2026-05-30 — ENDF/B-VII.0 OpenMC HDF5 availability (closed: not available)
+
+### Context
+
+Phase 1.1.e Suspect 2 was scoped to combine `basket_shell=false` with three
+cross-section libraries (ENDF/B-VII.0, VII.1, JEFF-3.3) to isolate library
+sensitivity at the corrected geometry. Shen et al. 2021 cites "ENDF/B-VII"
+without a sub-version, so both VII.0 and VII.1 were targeted to bracket
+Shen's choice.
+
+### Finding
+
+No first-party OpenMC HDF5 build of ENDF/B-VII.0 is published. The OpenMC
+official data libraries page (openmc.org/official-data-libraries) lists
+only ENDF/B-VII.1, ENDF/B-VIII.0, and JEFF-3.3. The LANL Box mirror
+referenced in the OpenMC "data" section distributes VII.0 only in
+MCNP/ACE format (`mcnp_endfb70/`), which OpenMC does not ingest directly.
+
+CI run 26681314800 confirmed this: the archive downloaded and extracted
+successfully but produced `mcnp_endfb70/` rather than the expected
+`endfb-vii.0-hdf5/cross_sections.xml` layout, and the run aborted at the
+"confirm cross-sections present" step.
+
+### Decision
+
+ENDF/B-VII.0 is removed from the Promethea-supported library list. Shen's
+"ENDF/B-VII" is treated as ENDF/B-VII.1 for benchmark-comparison purposes:
+VII.1 is the released update to VII.0 and is what most 2010s-era reactor
+physics work in the OpenMC community uses by default.
+
+### Future work
+
+If a VII.0 comparison becomes scientifically necessary (e.g. for a
+specific isotope where VII.0 → VII.1 introduced a known evaluation
+change), the path is: convert the LANL MCNP/ACE VII.0 distribution to
+HDF5 via NJOY's `openmc-ace-to-hdf5` utility, then host the resulting
+archive on the project's own asset store. This is a separate
+infrastructure project, not a Promethea benchmark step, and is deferred.
+
+### Suspect 2 scope revision
+
+The library sweep at `basket_shell=false` is now a 3-library comparison
+(VIII.0, VII.1, JEFF-3.3) — sufficient to characterize the inter-library
+spread at the corrected geometry. VIII.0 is the canonical configuration;
+VII.1 reproduces Shen's reported library; JEFF-3.3 provides an
+independent (European, different evaluator chain) cross-check.
+
+---

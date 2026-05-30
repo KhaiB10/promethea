@@ -58,7 +58,6 @@ on:
         options:
           - endfb-viii.0
           - endfb-vii.1
-          - endfb-vii.0
           - jeff-3.3
       basket_shell:
         description: "INOR-8 shell on the sample-basket position. true = Phase 1.1.c default, false = TM-0728 §4.1 'graphite sample assembly' (Suspect-1 audit)."
@@ -105,7 +104,6 @@ jobs:
           case "$XS_LIB" in
             endfb-viii.0) DIRNAME="endfb-viii.0-hdf5" ;;
             endfb-vii.1)  DIRNAME="endfb-vii.1-hdf5" ;;
-            endfb-vii.0)  DIRNAME="endfb-vii.0-hdf5" ;;
             jeff-3.3)     DIRNAME="jeff-3.3-hdf5" ;;
             *) echo "Unknown xs_library: $XS_LIB"; exit 1 ;;
           esac
