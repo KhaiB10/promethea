@@ -59,6 +59,14 @@ on:
           - endfb-viii.0
           - endfb-vii.1
           - jeff-3.3
+      basket_shell:
+        description: "INOR-8 shell on the sample-basket position. true = Phase 1.1.c default, false = TM-0728 §4.1 'graphite sample assembly' (Suspect-1 audit)."
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
   push:
     paths:
       - "benchmarks/msre/**"
@@ -71,7 +79,7 @@ on:
 # queue instead of preempt each other, while repeated pushes still
 # cancel stale default runs on the same ref.
 concurrency:
-  group: msre-${{ github.ref }}-${{ github.event_name }}-${{ github.event.inputs.mode || 'homog' }}-${{ github.event.inputs.boron_ppm || '0.3' }}-${{ github.event.inputs.fillet_radius_cm || '0.0' }}-${{ github.event.inputs.xs_library || 'endfb-viii.0' }}
+  group: msre-${{ github.ref }}-${{ github.event_name }}-${{ github.event.inputs.mode || 'homog' }}-${{ github.event.inputs.boron_ppm || '0.3' }}-${{ github.event.inputs.fillet_radius_cm || '0.0' }}-${{ github.event.inputs.xs_library || 'endfb-viii.0' }}-${{ github.event.inputs.basket_shell || 'true' }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
@@ -169,6 +177,7 @@ jobs:
           FILLET_R: ${{ github.event.inputs.fillet_radius_cm || '0.0' }}
           XS_XML: ${{ steps.xs-paths.outputs.xs_xml }}
           XS_LIB: ${{ steps.xs-paths.outputs.xs_lib }}
+          BASKET_SHELL: ${{ github.event.inputs.basket_shell || 'true' }}
         run: |
           mkdir -p out
           docker run --rm \
@@ -180,6 +189,7 @@ jobs:
             -e PROMETHEA_BORON_PPM=$BORON_PPM \
             -e PROMETHEA_FILLET_RADIUS_CM=$FILLET_R \
             -e PROMETHEA_XS_LIBRARY=$XS_LIB \
+            -e PROMETHEA_BASKET_SHELL=$BASKET_SHELL \
             -e HOME=/tmp \
             -w /workspace \
             promethea:ci \
@@ -199,6 +209,7 @@ jobs:
             echo "**CGB boron (ppm):** ${{ github.event.inputs.boron_ppm || '0.3' }}"
             echo "**Fillet radius (cm):** ${{ github.event.inputs.fillet_radius_cm || '0.0' }}"
             echo "**Cross-section library:** \`${{ github.event.inputs.xs_library || 'endfb-viii.0' }}\`"
+            echo "**Basket INOR-8 shell:** \`${{ github.event.inputs.basket_shell || 'true' }}\`"
             echo ""
             echo "### k-eff"
             echo '```'

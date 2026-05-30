@@ -871,6 +871,19 @@ def build_geometry_het_baskets(mats: Dict[str, openmc.Material]):
     ]
     BASKET_INDEX = 3
 
+    # Phase 1.1.e Suspect-1 audit:
+    # TM-0728 §4.1 says the 4th position is occupied by a "graphite sample
+    # assembly" — it does NOT describe an INOR-8 shell at this position,
+    # only at the three control-rod thimble positions. Shen 2021 similarly
+    # describes the sample baskets as "graphite and INOR-8 sample baskets"
+    # whose contents (graphite bars + INOR-8 specimens) are the only
+    # Inconel in the basket, not a shell.
+    # Set PROMETHEA_BASKET_SHELL=false to model the basket without the
+    # INOR-8 thimble shell (default: true, matches Phase 1.1.c step 4).
+    BASKET_HAS_SHELL = os.environ.get(
+        "PROMETHEA_BASKET_SHELL", "true"
+    ).lower() not in ("false", "0", "no")
+
     thimble_outer_surfs = []
     thimble_inner_surfs = []
     for i, (x, y) in enumerate(thimble_positions):
@@ -939,9 +952,24 @@ def build_geometry_het_baskets(mats: Dict[str, openmc.Material]):
     # and salt bore above/below.
     thimble_cells = []
     for i, _ in enumerate(thimble_positions):
+        is_basket = (i == BASKET_INDEX)
+        # Shell fill: Inconel for control-rod thimbles, and for the basket
+        # only if BASKET_HAS_SHELL is true. Otherwise the shell annulus is
+        # filled with the same material as the bore at that height (salt
+        # outside the basket-mix axial range, basket-mix inside it). For
+        # simplicity we fill the shell annulus with salt across the full
+        # vessel height when the basket has no shell — the small overlap
+        # with the basket-mix axial range is a sub-1% correction.
+        if is_basket and not BASKET_HAS_SHELL:
+            shell_fill = mats["salt"]
+            shell_name = f"thimble_{i}_shell_NO_INOR_salt"
+        else:
+            shell_fill = mats["inor"]
+            shell_name = f"thimble_{i}_shell"
+
         shell = openmc.Cell(
-            name=f"thimble_{i}_shell",
-            fill=mats["inor"],
+            name=shell_name,
+            fill=shell_fill,
             region=(+thimble_inner_surfs[i] & -thimble_outer_surfs[i]
                     & +vessel_bot & -vessel_top),
         )
@@ -1050,6 +1078,12 @@ def build_geometry_het_critical(mats: Dict[str, openmc.Material]):
     INSERTED_INDEX = 2
     BASKET_INDEX   = 3
 
+    # Phase 1.1.e Suspect-1: optional removal of INOR-8 shell on the
+    # sample-basket position only (see het_baskets docstring for rationale).
+    BASKET_HAS_SHELL = os.environ.get(
+        "PROMETHEA_BASKET_SHELL", "true"
+    ).lower() not in ("false", "0", "no")
+
     thimble_outer_surfs = []
     thimble_inner_surfs = []
     for i, (x, y) in enumerate(thimble_positions):
@@ -1124,10 +1158,16 @@ def build_geometry_het_critical(mats: Dict[str, openmc.Material]):
 
     thimble_cells = []
     for i, _ in enumerate(thimble_positions):
-        # Shell is INOR-8 over the full vessel height.
+        is_basket = (i == BASKET_INDEX)
+        if is_basket and not BASKET_HAS_SHELL:
+            shell_fill = mats["salt"]
+            shell_name = f"thimble_{i}_shell_NO_INOR_salt"
+        else:
+            shell_fill = mats["inor"]
+            shell_name = f"thimble_{i}_shell"
         shell = openmc.Cell(
-            name=f"thimble_{i}_shell",
-            fill=mats["inor"],
+            name=shell_name,
+            fill=shell_fill,
             region=(+thimble_inner_surfs[i] & -thimble_outer_surfs[i]
                     & +vessel_bot & -vessel_top),
         )
