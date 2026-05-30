@@ -238,6 +238,81 @@ sub-step 2 is the cheapest sensitivity, and sub-step 3 is the long-run.
 
 ---
 
+## Phase 1.1.d step C — CGB graphite B-10 sensitivity sweep
+
+### Why
+
+Reactor-grade CGB graphite carries a small natural-boron impurity whose
+thermal absorption can move k-eff by several hundred pcm even at
+sub-ppm levels. MSRE-Mark-I CGB acceptance was **≤ 0.3 ppm total
+natural B** (TM-0728 Tab. 2.7); reported batch values run **0.1–1.0 ppm**
+(Compere 1975, Shen 2021). IRPhE's Serpent benchmark uses a single
+point value, but the document doesn't pin it precisely — so we sweep.
+
+### Implementation
+
+`materials.py` now exposes `build_graphite(temperature_K, boron_ppm=…)`.
+Total boron ppm is split into B-10 and B-11 using natural abundance
+(19.9 / 80.1 atom %). `build_all` reads the env var
+`PROMETHEA_BORON_PPM` (default 0.3). The workflow accepts a
+`boron_ppm` input and pipes it to the container.
+
+Commit `8db68d8` adds the parameterization; commit `e7f5345` makes the
+concurrency group key on event/mode/boron_ppm so sweep dispatches
+queue serially without preempting each other.
+
+### Sweep results (100k × 100, het_critical, corrected stringers)
+
+| Boron (ppm) | k-eff | σ | Δk vs 0.3 ppm | CI run |
+|---|---|---|---|---|
+| 0.1 | 1.01377 | 0.00034 | +69 ± 50 pcm | [26668414474](https://github.com/KhaiB10/promethea/actions/runs/26668414474) |
+| **0.3 (baseline)** | **1.01308** | **0.00036** | **—** | [26637499678](https://github.com/KhaiB10/promethea/actions/runs/26637499678) |
+| 0.6 | 1.01287 | 0.00034 | −21 ± 49 pcm | [26670248006](https://github.com/KhaiB10/promethea/actions/runs/26670248006) |
+| 1.0 | 1.01100 | 0.00042 | −208 ± 55 pcm | [26670249744](https://github.com/KhaiB10/promethea/actions/runs/26670249744) |
+
+### Sensitivity
+
+Weighted linear fit across the four points:
+
+\[ k_{\text{eff}}(b) = 1.01411(32) + (-280 \pm 56) \,\text{pcm/ppm} \cdot b \]
+
+- **Slope: −280 ± 56 pcm per ppm of total natural boron**, consistent
+  in sign and order-of-magnitude with the few-hundred pcm/ppm range
+  cited in Compere 1975 for MSRE thermal spectra.
+- The fit is dominated by the 0.1→1.0 endpoints; the 0.3 and 0.6
+  intermediate points sit within ±1σ of the regression line, so the
+  response is linear within statistics at these levels.
+
+### Gap analysis
+
+| Scenario | Implied Δk from boron alone | Residual gap to Serpent 1.02132 |
+|---|---|---|
+| We at 0.3 ppm, Shen at 0.3 ppm (no boron mismatch) | 0 pcm | −824 pcm |
+| We at 1.0 ppm, Shen at 0.1 ppm | +277 pcm | −547 pcm |
+| We at 1.0 ppm, Shen at 0.0 ppm | +311 pcm | −513 pcm |
+
+**Conclusion: B-10 impurity alone cannot close the 824 pcm gap to the
+Shen-Serpent target.** Even the most pessimistic mismatch (we ran
+upper-spec, Shen ran zero-boron) explains at most ~38% of the gap.
+The bulk of the remaining bias must come from geometry detail still
+omitted (corner-rounded half-channels, exact thimble dimensions, etc.)
+and/or cross-section library differences.
+
+Also worth noting: the gap to **experimental** criticality (0.99978)
+shrinks from +1330 pcm to +1102 pcm if we adopt the 1.0 ppm upper-spec
+value. That's the right direction — a higher boron value brings us
+closer to experiment while widening the gap to Shen, reinforcing the
+read from Phase 1.1.d step 1 that Shen's Serpent is itself biased
+high relative to the experimental point.
+
+### Recommended baseline going forward
+
+Keep **0.3 ppm as the canonical baseline** (matches MSRE-Mark-I CGB
+acceptance spec and is the midpoint of reported batch values). Cite
+the full sweep as a sensitivity envelope in future writeups.
+
+---
+
 ## Phase order
 
 Recommend implementing in this order:
