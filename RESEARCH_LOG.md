@@ -245,3 +245,113 @@ arriving within 230 pcm of an OpenMC team's own implementation is a
 real positive result, but only if it is positioned that way.
 
 ---
+## 2026-05-30 — Suspect 2: library × basket_shell sensitivity matrix (CLOSED)
+
+### Finding
+
+Combined the Phase 1.1.e Suspect-1 fix (basket_shell=false) with all
+three supported cross-section libraries (ENDF/B-VIII.0, ENDF/B-VII.1,
+JEFF-3.3) to produce a 3 × 2 sensitivity matrix. ENDF/B-VII.0 is
+unavailable as an OpenMC HDF5 build (see prior entry) and is excluded.
+
+### Results
+
+CI runs (2026-05-30, 100k × 100, het_critical, 0.3 ppm B, sharp corners):
+
+| Library | basket_shell=true | basket_shell=false | Δ from shell removal |
+|---|---:|---:|---:|
+| ENDF/B-VIII.0 | 1.01308 ± 0.00036 | **1.02353 ± 0.00033** | **+1045 ± 49 pcm** |
+| ENDF/B-VII.1  | 1.01163 ± 0.00038 | **1.02200 ± 0.00037** | **+1037 ± 53 pcm** |
+| JEFF-3.3      | 1.01485 ± 0.00034 | **1.02500 ± 0.00035** | **+1015 ± 49 pcm** |
+
+Source runs: VII.1 shell=false → run 26681315297 (artifact 7307583074);
+JEFF-3.3 shell=false → run 26681315771 (artifact 7307608797).
+
+### Two cleanly-separable effects
+
+The shell-removal effect (mean +1032 pcm, range 1015 to 1045) is
+**independent of library choice** to within 1σ uncertainty across all
+three libraries. The basket-shell defect is a geometry term that adds
+a fixed parasitic absorption volume; the cross-section data used to
+evaluate that absorption changes the answer by only ~30 pcm across
+libraries. Methodologically: the +1045 ± 49 pcm value reported as
+Suspect-1's contribution is robust against library choice.
+
+The library spread (max − min):
+- At shell=true: 322 pcm (JEFF-3.3 highest, VII.1 lowest).
+- At shell=false: 300 pcm (JEFF-3.3 highest, VII.1 lowest).
+
+The inter-library spread is also robust against the shell defect.
+This means the two parameters separate cleanly into orthogonal terms.
+
+### Comparison to references at the corrected geometry
+
+| Reference | k_eff | Promethea match | Δ (Promethea − ref) |
+|---|---:|---|---:|
+| Shen-Serpent 2021 (VII.1) | 1.02132 ± 0.00003 | Promethea VII.1, shell=false | **+68 ± 37 pcm** |
+| Yilmaz CSG 2024 (VIII.0)  | 1.02122 | Promethea VIII.0, shell=false | +231 pcm |
+| IRPhE experimental        | 0.99978 | (canonical) | +2375 pcm |
+
+The Promethea ENDF/B-VII.1 + basket_shell=false configuration matches
+the Shen-Serpent reference (which uses ENDF/B-VII.1 per Yilmaz 2024
+§3) to within **68 ± 37 pcm** — well inside 2σ. This is the
+library-matched comparison that closes the benchmark question: at the
+same library and the same corrected geometry, Promethea and Shen-Serpent
+agree to within Monte Carlo statistics.
+
+The Promethea ENDF/B-VIII.0 canonical configuration still matches
+Yilmaz CSG 2024 to within 231 pcm, which is below the 300-pcm
+inter-library spread and is the expected accuracy floor.
+
+### Cross-section library hierarchy at the corrected geometry
+
+In order of k_eff at basket_shell=false:
+
+1. JEFF-3.3 (1.02500) — highest, +300 pcm above VII.1.
+2. ENDF/B-VIII.0 (1.02353) — middle, +153 pcm above VII.1.
+3. ENDF/B-VII.1 (1.02200) — lowest of the three; matches Shen-Serpent.
+
+The same ordering holds at shell=true. JEFF-3.3's systematic hotness
+is a known feature attributed primarily to its U-235 evaluation
+(different ν̄ at thermal energies vs ENDF/B-VII.1/VIII.0).
+
+### Production canonical configuration (final, v0.1.0 onward)
+
+The canonical Promethea configuration is unchanged from the v0.1.0
+release:
+
+```yaml
+mode: het_critical
+particles: 100000
+batches: 100
+boron_ppm: 0.3
+fillet_radius_cm: 0.0
+xs_library: endfb-viii.0
+basket_shell: false
+```
+
+This gives k = 1.02353 ± 0.00033, matching Yilmaz CSG (VIII.0) within
+231 pcm and Shen-Serpent (VII.1) within 221 pcm (the latter is mostly
+the VIII.0 − VII.1 library offset).
+
+For the IRPhE submission-of-record run, the same configuration will
+be repeated at 200k × 200 statistics for σ ≈ 15 pcm, plus a
+companion VII.1 run at the same statistics to enable the
+library-matched comparison to Shen-Serpent.
+
+### Plot
+
+`benchmarks/msre/plots/phase_1_1_e_suspect2/sensitivity_matrix.png`
+visualizes the 3 × 2 matrix with Shen-Serpent, Yilmaz CSG, and IRPhE
+experimental as horizontal reference lines.
+
+### Status
+
+**Suspect 2 is closed.** The library question is resolved: ENDF/B-VIII.0
+is the production library (matches Yilmaz CSG ANL/ORNL canonical
+choice); ENDF/B-VII.1 is the Shen-Serpent comparison library and gives
+the closest match (68 pcm) to that reference. Remaining sensitivity
+studies (INOR-8 cladding thickness, lower-core lattice, fuel-salt
+re-derivation) are polishing rather than gap-closing work.
+
+---

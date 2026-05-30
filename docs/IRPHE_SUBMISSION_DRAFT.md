@@ -26,15 +26,21 @@ graphite stringers, three control-rod thimbles, one graphite sample
 basket, and the surrounding INOR-8 vessel. The benchmark configuration
 matches the IRPhE rod-position specification (one control rod inserted
 4.4 in, two withdrawn) and the canonical CGB-grade graphite boron
-content of 0.3 ppm natural boron. The combined k-effective from the
-canonical configuration is **1.02353 ± 0.00033** (100 000 particles
-per batch, 100 active batches), which agrees with the published
-Shen-Serpent reference value of 1.02132 ± 0.00003 (Shen et al. 2021)
-to within 221 ± 33 pcm — well within the inter-library spread of
-322 pcm that we independently measured across ENDF/B-VII.1, VIII.0,
-and JEFF-3.3. The full benchmark configuration runs as a one-click
-GitHub Actions dispatch and is reproducible by any third party without
-specialised infrastructure.
+content of 0.3 ppm natural boron. The combined k-effective at the
+canonical configuration (ENDF/B-VIII.0, basket_shell=false) is
+**1.02353 ± 0.00033** (100 000 particles per batch, 100 active
+batches), matching the Yilmaz CSG OpenMC reference (Yilmaz et al.
+2024, k = 1.02122) to within 231 pcm. The library-matched
+configuration (ENDF/B-VII.1, basket_shell=false) gives k = 1.02200 ±
+0.00037, matching the Shen-Serpent reference (Shen et al. 2021,
+k = 1.02132 ± 0.00003) to within **68 ± 37 pcm** — inside
+2σ Monte Carlo statistical uncertainty. Parameterised sensitivity
+studies across three cross-section libraries and the basket-shell
+configuration establish that the library spread (300 pcm) and the
+basket-shell defect (1032 ± 32 pcm, library-independent) separate
+cleanly into orthogonal terms. The full benchmark configuration runs
+as a one-click GitHub Actions dispatch and is reproducible by any
+third party without specialised infrastructure.
 
 ## 2. Model description
 

@@ -5,10 +5,14 @@
 I rebuilt the Molten Salt Reactor Experiment (MSRE, ORNL, 1965)
 criticality benchmark from primary sources in OpenMC, an open-source
 Monte Carlo neutron transport code. After three months of iteration in
-public on GitHub, the model now matches the most recent published
-Serpent benchmark (Shen et al. 2021) to within ~220 pcm, and matches
-the IRPhE-evaluated experimental k-effective of 0.99978 to within the
-range expected from cross-section-library choice and methodology.
+public on GitHub, the library-matched configuration (ENDF/B-VII.1)
+now matches the most recent published Serpent benchmark (Shen et al.
+2021, also ENDF/B-VII.1) to within **68 ± 37 pcm** — inside the
+2-sigma Monte Carlo statistical uncertainty. The ENDF/B-VIII.0
+production configuration matches the independent ANL/ORNL OpenMC
+implementation (Yilmaz et al. 2024) to within ~230 pcm. The model is
+fully open and runs as a one-click reproduction on free GitHub Actions
+infrastructure.
 
 The dominant defect was not boron content, not the cross-section
 library, and not corner geometry — all of which the literature flags as
