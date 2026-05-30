@@ -363,3 +363,71 @@ studies (INOR-8 cladding thickness, lower-core lattice, fuel-salt
 re-derivation) are polishing rather than gap-closing work.
 
 ---
+
+## 2026-05-30 — v0.2.0 submission-of-record statistics
+
+Two 200 000-particle × 200-active-batch runs were dispatched on
+2026-05-30 at 13:18 UTC and completed successfully:
+
+| Configuration | k-eff | σ | Workflow run | Artifact |
+|---|---|---|---|---|
+| VIII.0 canonical, basket_shell=false | **1.02364** | 0.00016 | 26684813980 | msre-het_critical-endfb-viii.0-run-67 |
+| VII.1 library-matched, basket_shell=false | **1.02202** | 0.00019 | 26684815881 | msre-het_critical-endfb-vii.1-run-68 |
+
+Both runs are checked into the repository as
+`benchmarks/msre/runs/v0.2.0_submission/{viii0_run67,vii1_run68}_msre_run.log`
+for provenance.
+
+### Gap analysis at submission-of-record statistics
+
+- **VII.1 vs Shen-Serpent 2021 (VII.1):** Δ = +70 ± 19 pcm (1σ),
+  or +70 ± 39 pcm (2σ). Previously +68 ± 37 pcm (2σ) at v0.1.0
+  100k × 100 statistics. The cross-code library-matched agreement
+  with Shen-Serpent is confirmed at the submission-of-record level.
+- **VIII.0 vs Yilmaz CSG 2024 (VIII.0):** Δ = +242 pcm. Tight
+  library-matched cross-OpenMC validation against the canonical
+  ANL/ORNL OpenMC MSRE benchmark.
+- **vs IRPhE experimental:** +2386 pcm (VIII.0) and +2224 pcm
+  (VII.1). The remaining gap to experimental is library-bias plus
+  CSG-vs-CAD geometry effects, neither of which is in v0.x scope.
+
+### Reproducibility check
+
+The v0.2.0 means reproduce the v0.1.0 100k × 100 means within
++11 pcm (VIII.0) and +2 pcm (VII.1), well inside the combined σ.
+Per-run σ shrinks by a factor of ~2× — consistent with the √4
+expectation from 4× the histories. The canonical configuration is
+stable across two independent statistical samples.
+
+### TM-730 primary-source audit
+
+In parallel with the submission-of-record runs, a complete audit of
+every ORNL technical report citation in the repository was performed
+against the original TM-730 PDF (osti.gov/biblio/4114686). Findings
+and corrections are documented in `.local/TM730_AUDIT.md` and applied
+across the repository in commit `e4fd5b1`. Most significant findings:
+
+1. Every "ORNL-TM-0728" in the repository was a typo; correct number
+   is **ORNL-TM-730** (Haubenreich, Engel, Prince, Claiborne, issued
+   3 February 1964, Part III Nuclear Analysis).
+2. **TM-730 §4.2.1 contains a direct primary-source endorsement of
+   `basket_shell=false`:** *"the effect of the graphite sample holder
+   was neglected in these preliminary calculations."* This makes the
+   Promethea canonical configuration not merely consistent with the
+   geometric description in §4.1, but explicitly matched to the
+   original Haubenreich et al. (1964) methodology.
+3. **Fuel-fraction systematic bias acknowledged:** the as-built MSRE
+   used rounded corners with f = 0.225 (TM-730 §2, lines 1756–1761),
+   while the Promethea canonical configuration with sharp corners
+   recovers f = 0.240. ~7% over-prediction of fuel inventory in the
+   active core, documented as a known bias of the v0.2.0 canonical
+   configuration. Quantification via a rounded-corner sensitivity run
+   is scheduled for v0.3.0.
+
+### Status
+
+**v0.2.0 substantially complete.** Submission-of-record values
+locked, TM-730 primary-source audit clean, documentation drafts in
+place. Tagging v0.2.0 next.
+
+---
