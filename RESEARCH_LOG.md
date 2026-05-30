@@ -159,3 +159,89 @@ VII.1 reproduces Shen's reported library; JEFF-3.3 provides an
 independent (European, different evaluator chain) cross-check.
 
 ---
+## 2026-05-30 — Critical prior-art discovery: Yilmaz et al. 2024 OpenMC MSRE
+
+### Finding
+
+In verifying the Shen et al. 2021 citation, located a 2024 paper directly
+adjacent to this project's scope:
+
+**Yilmaz, S., Romano, P. K., Chierici, L., Knudsen, E. B., Shriwise, P. C.
+(2024). "CAD and constructive solid geometry modeling of the Molten Salt
+Reactor Experiment with OpenMC." *Frontiers in Nuclear Engineering*,
+3:1385478. DOI: 10.3389/fnuen.2024.1385478.**
+
+This is from the OpenMC core team — Romano is the OpenMC project lead at
+ANL; Shriwise is a long-time OpenMC developer. It implements the MSRE
+benchmark in OpenMC using both constructive-solid-geometry (CSG) and CAD
+representations, and compares to Shen-Serpent.
+
+### Reported values (Yilmaz et al. 2024)
+
+- **OpenMC CSG, ENDF/B-VIII.0:** k_eff = **1.02122**
+  (agrees with Shen-Serpent 1.02132 to within 10 pcm).
+- **OpenMC CAD, ENDF/B-VIII.0:** k_eff = **1.00872**
+  (much closer to experimental 0.99978; +894 pcm vs experiment).
+- **2018 IRPhE edition handbook k_eff:** stated to be **>1.030**
+  (more than 3% above experiment).
+- They confirm **Shen et al. 2021 used Serpent 2.1.30 with ENDF/B-VII.1.**
+
+### Implications
+
+1. **Honest framing for the paper.** Promethea is NOT the first
+   open-source OpenMC MSRE benchmark; it is the second. Yilmaz 2024
+   precedes it by ~24 months. Any submission must cite Yilmaz 2024 as
+   the canonical OpenMC MSRE prior implementation and position
+   Promethea's contribution as (a) systematic sensitivity studies on
+   the parameters that dominate the gap (basket-shell defect, library,
+   boron, corner geometry), (b) full automation in CI on free
+   infrastructure, and (c) an independent re-derivation arriving at
+   the same answer as the ANL/ORNL implementation to within ~230 pcm,
+   which is a non-trivial cross-check.
+
+2. **The basket-shell defect is unique to Promethea.** Yilmaz et al.
+   2024 explicitly modeled the sample basket as graphite-without-shell
+   (consistent with their citation of TM-0728); they did not report a
+   shell-related overshoot because they never had one. The Promethea
+   Suspect-1 finding (+1045 pcm shell defect) is therefore a
+   pedagogical/methodological result, not a discovery of new physics.
+   Reframe in the paper: "this is the kind of defect that gets
+   introduced when a CSG model is built without close reading of the
+   primary geometry sources — and is the kind of defect a parameterized
+   sensitivity study can catch and quantify."
+
+3. **The ~2% CSG-vs-experimental overshoot is a known systematic.**
+   Promethea's 2375-pcm overshoot of the IRPhE experimental value is
+   not a defect of the model; it is the CSG-vs-CAD gap that Yilmaz
+   characterized. Real future work for Promethea is implementing the
+   CAD geometry to close that gap.
+
+4. **Powers (ORNL) and Fratoni (UC Berkeley) are the strongest
+   senior-co-author candidates** for the Promethea paper. They
+   co-authored Shen et al. 2021 directly, and so have explicit
+   standing on the exact reference Promethea benchmarks against.
+   Powers is at the lab that built the MSRE; Fratoni leads an MSR
+   group at Berkeley. Both are already on the co-author shortlist.
+
+### Action items
+
+- Update IRPhE_SUBMISSION_DRAFT.md to cite Yilmaz 2024 and
+  re-position the comparison table. [DONE 2026-05-30]
+- Update BLOG_POST_DRAFT.md to acknowledge Yilmaz 2024 as the
+  prior OpenMC implementation. [TODO]
+- Update the paper outline (when written) to lead with Yilmaz 2024
+  as the comparison point, not just Shen 2021.
+- Reconfirm coauthor shortlist gives top priority to Powers and
+  Fratoni. (Shen and Ilas should also be approached but as primary
+  authors of the reference work, not senior advisors.)
+
+### Honesty note
+
+Discovering Yilmaz 2024 mid-project, on a citation check, is exactly
+the kind of finding that has to be surfaced and documented rather than
+quietly absorbed. The science is the same; the framing has to change.
+Three months of independent re-derivation from primary sources
+arriving within 230 pcm of an OpenMC team's own implementation is a
+real positive result, but only if it is positioned that way.
+
+---

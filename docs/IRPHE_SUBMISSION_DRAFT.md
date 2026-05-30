@@ -194,21 +194,25 @@ Result:
 
 ### 4.2 Comparison with references
 
-| Reference | k-eff | σ | Δ from Promethea |
-|---|---:|---:|---:|
-| Shen et al. 2021 (Serpent) | 1.02132 | 0.00003 | +221 ± 33 pcm |
-| IRPhE evaluated | (handbook value) | — | (to insert) |
-| IRPhE experimental | 0.99978 | — | +2375 pcm |
+| Reference | k-eff | σ | Δ from Promethea | Notes |
+|---|---:|---:|---:|---|
+| Shen et al. 2021 (Serpent 2.1.30, VII.1) | 1.02132 | 0.00003 | +221 ± 33 pcm | reference comparison |
+| Yilmaz et al. 2024 (OpenMC CSG, VIII.0) | 1.02122 | — | +231 pcm | OpenMC CSG agrees with Shen-Serpent within 10 pcm |
+| Yilmaz et al. 2024 (OpenMC CAD, VIII.0) | 1.00872 | — | +1481 pcm | CAD model reports closer agreement with experiment |
+| IRPhE evaluated (2018 ed., handbook) | >1.030 | — | (to insert) | per Yilmaz et al. 2024 §1 |
+| IRPhE experimental | 0.99978 | — | +2375 pcm | rods inserted to critical |
 
-The Promethea–Shen difference (221 pcm) is smaller than the inter-
-library spread (322 pcm from §3.3). The Promethea–experiment
-difference (~2400 pcm) is consistent with the Shen–experiment
-difference (~2150 pcm); both calculational models overshoot the IRPhE
-experimental value by approximately the same amount, which is a known
-systematic feature of MSRE first-criticality benchmark calculations
-(attributed in the IRPhE evaluation to a combination of bias
-adjustments, thermal expansion treatment, and reflector composition
-uncertainty — to be discussed in §5).
+The Promethea result agrees with the independent ANL/ORNL OpenMC CSG
+implementation of Yilmaz et al. 2024 to within 231 pcm, and with the
+Shen-Serpent reference to within 221 pcm. The Promethea–Shen
+difference is smaller than the inter-library spread (322 pcm from
+§3.3). The systematic ~2% overshoot of the experimental value, shared
+by Promethea, Shen-Serpent, and the Yilmaz-CSG OpenMC implementation,
+is attributed in Yilmaz et al. 2024 to constructive-solid-geometry
+simplifications: the Yilmaz CAD model recovers k = 1.00872, much
+closer to the experimental value of 0.99978, indicating that ~1% of
+the overshoot is recoverable by faithful 3-D CAD geometry beyond what
+CSG can represent (a future-work item for Promethea, discussed in §5).
 
 ## 5. Discussion
 
@@ -246,22 +250,38 @@ repository under the MIT license.
 
 - ORNL-TM-0728: *MSRE Design and Operations Report Part III —
   Nuclear Analysis*. Oak Ridge National Laboratory, 1964.
-- Shen et al. 2021: "Coupled neutronics and thermal-hydraulics
-  analysis of MSRE based on RMC-CTF coupling scheme." *Annals of
-  Nuclear Energy* — full citation to be confirmed.
+- Shen, D., Ilas, G., Powers, J. J., Fratoni, M. (2021).
+  "Reactor Physics Benchmark of the First Criticality in the Molten
+  Salt Reactor Experiment." *Nuclear Science and Engineering*,
+  **195**(8), 825–837. DOI: 10.1080/00295639.2021.1880850.
+- Yilmaz, S., Romano, P. K., Chierici, L., Knudsen, E. B., Shriwise,
+  P. C. (2024). "CAD and constructive solid geometry modeling of the
+  Molten Salt Reactor Experiment with OpenMC." *Frontiers in Nuclear
+  Engineering*, 3:1385478. DOI: 10.3389/fnuen.2024.1385478.
 - Robertson 1965: *MSRE Design and Operations Report Part V —
   Reactor Safety*. Oak Ridge National Laboratory.
 - IRPhE Handbook: OECD/NEA *International Handbook of Evaluated
-  Reactor Physics Benchmark Experiments*.
+  Reactor Physics Benchmark Experiments*, MSR-MSRE-RES-001.
 
 ---
 
 ## Internal: items to resolve before formal submission
 
-1. Confirm Shen et al. 2021 full citation (journal, volume, pages, DOI).
+1. ~~Confirm Shen et al. 2021 full citation~~ — RESOLVED 2026-05-30:
+   *Nuclear Science and Engineering* 195(8), 825-837,
+   DOI 10.1080/00295639.2021.1880850. Authors: Shen, Ilas, Powers,
+   Fratoni. Powers is at ORNL; Fratoni is at UC Berkeley; both are
+   strong senior-co-author candidates with direct standing on this
+   exact benchmark.
 2. Retrieve the IRPhE evaluated handbook k-eff value for the MSRE
    first-criticality configuration (vs the experimental value).
-3. Identify and confirm the senior co-author (see `coauthor_candidates.md`).
+   Yilmaz et al. 2024 reports that the 2018 IRPhE edition gives a
+   k-eff more than 3% above experimental (i.e. above 1.030); the
+   exact value needs the handbook itself.
+3. ~~Identify and confirm the senior co-author~~ — IN PROGRESS:
+   Powers (ORNL) and Fratoni (UC Berkeley) are the natural choices
+   given their direct authorship of the Shen et al. 2021 benchmark
+   this work compares against. See `coauthor_candidates.md`.
 4. Decide canonical statistics target — current 100k×100 gives σ~30 pcm.
    Consider bumping to 200k×200 for the submission-of-record run to
    tighten σ to ~15 pcm.

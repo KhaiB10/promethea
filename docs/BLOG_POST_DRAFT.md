@@ -35,20 +35,27 @@ designer benchmarks against EBR-II. If you cannot reproduce the MSRE's
 critical configuration to within ~1% k-eff using your code of choice,
 your code is not yet usable for design.
 
-The two open benchmarks against MSRE that I am aware of are:
+The three open benchmarks against MSRE that I am aware of are:
 
 - **IRPhE handbook MSR-MSRE-RES-001** — the official OECD/NEA evaluated
   benchmark; k_eff_exp = 0.99978 ± reported uncertainty.
-- **Shen et al. 2021** — a Serpent (Monte Carlo, originally
-  VTT Finland) re-derivation that reports k = 1.02132 ± 0.00003 in a
-  "rods withdrawn" configuration. The +2,100 pcm offset from the
-  experimental value reflects the rods-out vs. rods-inserted-to-
-  critical condition; the residual ~22 pcm difference from a perfect
-  rods-out experimental value is what an OpenMC implementation needs
-  to recover.
+- **Shen et al. 2021** — a Serpent 2.1.30 + ENDF/B-VII.1 re-derivation
+  that reports k = 1.02132 ± 0.00003 in a "rods withdrawn"
+  configuration. (Nuclear Science and Engineering, 195(8), 825-837.)
+- **Yilmaz et al. 2024** — the ANL/ORNL OpenMC team's own MSRE
+  implementation comparing constructive-solid-geometry (CSG) and CAD
+  representations. Their CSG OpenMC model reports k = 1.02122 (within
+  10 pcm of Shen-Serpent); their CAD model reports k = 1.00872 (much
+  closer to the experimental value). (Frontiers in Nuclear Engineering,
+  3:1385478.)
 
-What was missing was an open-source OpenMC implementation of the same
-configuration. So that became the project.
+What I wanted to add was: (a) a third independent OpenMC
+implementation, built from scratch from the same primary sources, as
+a cross-check on the Yilmaz CSG result; (b) systematic, parameterized
+sensitivity studies on the four parameters that the literature flags
+as dominating the gap; and (c) a fully automated, free-infrastructure
+CI workflow so anyone with a GitHub account can reproduce the
+calculation. So that became the project.
 
 ## What I had to work with
 
@@ -149,8 +156,14 @@ What it means:
 - One person, one laptop, OpenMC, ~3 months of part-time effort, and
   free-tier CI is enough to land at the same k-effective as the
   state-of-the-art published Serpent benchmark of the same reactor,
-  with every dimension, every isotope, and every commit publicly
-  reproducible.
+  to within ~220 pcm, with every dimension, every isotope, and every
+  commit publicly reproducible.
+- Promethea agrees with the ANL/ORNL OpenMC CSG implementation
+  (Yilmaz et al. 2024) to within ~230 pcm. That is a non-trivial
+  cross-check: two independently developed OpenMC models of the same
+  reactor, built from the same primary sources, converging on the
+  same answer. The basket-shell defect would have been very hard to
+  catch without an automated sensitivity workflow.
 
 What it does not mean:
 
