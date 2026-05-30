@@ -53,10 +53,13 @@ on:
       - "environment.yml"
       - ".github/workflows/benchmark-msre.yml"
 
-# Cancel superseded runs to save minutes.
+# Cancel superseded runs to save minutes. Group by ref + dispatched
+# inputs so independent sweep dispatches (e.g. different boron_ppm)
+# queue instead of preempt each other, while repeated pushes still
+# cancel stale default runs on the same ref.
 concurrency:
-  group: msre-${{ github.ref }}
-  cancel-in-progress: true
+  group: msre-${{ github.ref }}-${{ github.event_name }}-${{ github.event.inputs.mode || 'homog' }}-${{ github.event.inputs.boron_ppm || '0.3' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   msre-v0:
