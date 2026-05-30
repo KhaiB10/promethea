@@ -313,6 +313,99 @@ the full sweep as a sensitivity envelope in future writeups.
 
 ---
 
+## Phase 1.1.d step 2 — Corner-rounded half-channels
+
+### Why
+
+TM-0728 §2.6 explicitly states: "Four half-channels 0.2- by 1.2-in. in
+each 2- by 2-in. graphite block were chosen to give a fuel fraction of
+0.24; rounding the corners of the channels reduced the fraction to
+0.225." Shen 2021 §2 likewise: "channels 1.016 cm by 3.048 cm with
+rounded corners are formed by grooves in the 4 sides of the bars."
+Phase 1.1.b/c/d-step-1 all used sharp corners (fuel fraction 0.240),
+leaving a ~6.25% over-statement of fuel volume.
+
+### Implementation (commit `0039a48`)
+
+`geometry_het.py` now exposes `FUEL_CHANNEL_CORNER_R`, set via the
+`PROMETHEA_FILLET_RADIUS_CM` env var (default 0 = sharp). Each
+half-channel notch receives two quarter-circle fillets at its inner
+corners (where the notch floor meets the end walls) — 8 fillets per
+stringer. Each fillet uses an OpenMC `ZCylinder` surface; the salt
+region intersects with the complement of each "sliver" (corner
+bounding-square minus quarter-disc), so graphite fills the corners.
+
+The workflow gains a `fillet_radius_cm` input. Concurrency key now
+includes the fillet radius so rounded-corner runs queue independently
+of sharp-corner runs.
+
+### Radius selection
+
+Solving for the fillet radius that reproduces TM-0728's 0.240 → 0.225
+target across 8 fillets per cell:
+
+\[ 8 r^2 (1 - \pi/4) = (0.240 - 0.225) \cdot 5.08^2 \quad\Longrightarrow\quad r \approx 0.4748\,\text{cm} \]
+
+The 0.475 cm radius is ~93% of the 0.508 cm half-channel depth —
+extreme, but the only single-radius solution. Sanity check via offline
+Monte Carlo on the 2D unit cell:
+
+- Analytical fuel fraction = 0.2250
+- MC (2 × 10⁵ samples) = 0.2256
+
+Both agree with the 0.225 spec.
+
+### Result (100k × 100, het_critical, B=0.3 ppm)
+
+| Geometry | k-eff | σ | Δk vs sharp | CI run |
+|---|---|---|---|---|
+| Sharp corners (baseline) | 1.01308 | 0.00036 | — | [26637499678](https://github.com/KhaiB10/promethea/actions/runs/26637499678) |
+| **r = 0.475 cm (TM-0728)** | **1.01320** | **0.00030** | **+12 ± 47 pcm** | [26671341501](https://github.com/KhaiB10/promethea/actions/runs/26671341501) |
+
+**Δk/σ = 0.26 — statistically null result.**
+
+### Interpretation
+
+The prior estimate (Phase 1.1.d plan: +30-80 pcm) overshot. Corner
+rounding at MSRE-relevant conditions (high enrichment, well-thermalized
+spectrum, dilute U-235) does not move k meaningfully. Two physical
+reasons converge on the small result:
+
+1. The corner region carries simultaneous fuel-and-moderator removal:
+   replacing salt with graphite removes both U-235 absorption *and*
+   parasitic Li-7/F absorption *and* adds moderation, all in a region
+   that is already well-thermalized. The net reactivity worth is
+   near-zero by construction.
+2. Lattice-cell averages dominate the reactor physics at MSRE’s
+   diffusion length; ~6% local volume rearrangement at the channel
+   corners shifts cell-averaged disadvantage factors by only a few %.
+
+### Implication for the Shen-Serpent gap
+
+Updated gap analysis: k(filleted) = 1.01320, gap to Shen target
+1.02132 is **+812 pcm** (vs +824 pcm at sharp corners). Corner
+rounding accounts for at most ~30 pcm of the gap — well within noise.
+
+**Conclusion: between B-10 sweep (max ~311 pcm) and corner rounding
+(max ~50 pcm) we have explained ~360 pcm of the 824 pcm gap.** The
+remaining ~450 pcm is most likely cross-section library, plus possibly
+geometry detail still omitted (e.g. exact horizontal-lattice cross
+section at the bottom, thimble centering vs hard-coded 7.62 cm offset).
+
+Runtime note: filleted-geometry runs are ~2× slower than sharp
+(~50 min vs ~25 min for 100k × 100) due to the extra ~39k cylinder
+surfaces injected into ray tracing. Acceptable for one-off comparisons;
+avoid for parameter sweeps.
+
+### Recommended canonical geometry going forward
+
+Keep **sharp corners (r=0) as the production default** — the 12 pcm
+delta is well within MC noise and the runtime cost of the filleted
+geometry is 2×. Reserve filleted runs for final validation or
+literature comparison.
+
+---
+
 ## Phase order
 
 Recommend implementing in this order:
