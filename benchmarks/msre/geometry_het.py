@@ -42,6 +42,7 @@ k-eff in the range 0.98 - 1.05  (loose; targets ~1.02)
 from __future__ import annotations
 
 import math
+import os
 from typing import Dict, List
 
 import openmc
@@ -66,6 +67,19 @@ STRINGER_SIDE       = 5.08          # stringer is also 2 inches square
 #   4 × (0.508 × 3.048) / 5.08² = 6.194 / 25.806 = 0.240 ✓ (TM-0728 §2.6)
 FUEL_CHANNEL_DEPTH  = 0.508         # half-groove depth into stringer (0.2 in)
 FUEL_CHANNEL_LENGTH = 3.048         # half-groove length along face   (1.2 in)
+
+# Half-channel inner-corner rounding (TM-0728 §2.6, Shen 2021).
+# TM-0728: "rounding the corners of the channels reduced the [fuel] fraction
+# to 0.225" (from 0.240 for sharp corners). Shen 2021 §2 likewise notes
+# "channels 1.016 cm by 3.048 cm with rounded corners". The two inner
+# corners of each half-channel notch (where the notch floor meets the end
+# walls) are filleted with quarter-circle arcs. Solving for the radius
+# that takes fuel fraction 0.240 -> 0.225 across 8 corners per stringer:
+#   8 * r^2 * (1 - pi/4) = (0.240 - 0.225) * 5.08^2
+#   r ~= 0.475 cm   (about 93% of the 0.508 cm half-channel depth)
+# Disabled (radius = 0) keeps the sharp-corner Phase 1.1.c geometry; set
+# PROMETHEA_FILLET_RADIUS_CM in the environment to enable.
+FUEL_CHANNEL_CORNER_R = float(os.environ.get("PROMETHEA_FILLET_RADIUS_CM", "0.0"))
 
 ACTIVE_CORE_HEIGHT  = 166.446       # IRPhE graphite-active height
 CORE_RADIUS         = 70.168        # IRPhE active-core equivalent radius
@@ -150,6 +164,7 @@ def _build_stringer_universe(mats: Dict[str, openmc.Material]) -> openmc.Univers
     half_pitch = STRINGER_PITCH / 2.0       # 2.540
     notch_depth = FUEL_CHANNEL_DEPTH        # 0.508 into the stringer
     half_length = FUEL_CHANNEL_LENGTH / 2.0 # 1.524 along the face
+    r = FUEL_CHANNEL_CORNER_R               # fillet radius (0 = sharp)
 
     # Four notch surfaces, one per face.
     # Each notch is `notch_depth` deep INTO the stringer (perpendicular to
@@ -178,6 +193,82 @@ def _build_stringer_universe(mats: Dict[str, openmc.Material]) -> openmc.Univers
     notch_B = -y_in_B & +x_lo_y & -x_hi_y
 
     salt_region = notch_R | notch_L | notch_T | notch_B
+
+    # ---- Inner-corner rounding (TM-0728 §2.6, Shen 2021) -------------------
+    # The two inner corners of each half-channel notch (where the floor meets
+    # the end walls) get filleted with quarter-circle arcs of radius r. We
+    # take fuel out of those corners by intersecting the salt region with
+    # the complement of each "sliver" (corner-square minus quarter-disc).
+    #
+    # Per-corner sliver geometry, e.g. +X face, +y end:
+    #   sharp inner corner at (x_in_R, +half_length)
+    #   bounding square: x in [x_in_R, x_in_R + r], y in [+half_length - r, +half_length]
+    #   fillet disc center: (x_in_R + r, +half_length - r), radius r
+    #   sliver = (bounding square) AND (outside the disc)
+    if r > 0.0:
+        if r > notch_depth or r > half_length:
+            raise ValueError(
+                f"fillet radius {r} cm exceeds half-channel depth ({notch_depth}) "
+                f"or half-length ({half_length})"
+            )
+        x_in_R_v = half_pitch - notch_depth
+        x_in_L_v = -half_pitch + notch_depth
+        y_in_T_v = half_pitch - notch_depth
+        y_in_B_v = -half_pitch + notch_depth
+
+        slivers = []
+
+        # +X face notch: two inner corners at (x_in_R_v, +/- half_length)
+        for sy in (+1.0, -1.0):
+            cx = x_in_R_v + r
+            cy = sy * (half_length - r)
+            disc = openmc.ZCylinder(x0=cx, y0=cy, r=r)
+            sq = (+openmc.XPlane(x_in_R_v) & -openmc.XPlane(x_in_R_v + r))
+            if sy > 0:
+                sq = sq & (+openmc.YPlane(half_length - r) & -openmc.YPlane(half_length))
+            else:
+                sq = sq & (+openmc.YPlane(-half_length) & -openmc.YPlane(-half_length + r))
+            slivers.append(sq & +disc)
+
+        # -X face notch: corners at (x_in_L_v, +/- half_length)
+        for sy in (+1.0, -1.0):
+            cx = x_in_L_v - r
+            cy = sy * (half_length - r)
+            disc = openmc.ZCylinder(x0=cx, y0=cy, r=r)
+            sq = (+openmc.XPlane(x_in_L_v - r) & -openmc.XPlane(x_in_L_v))
+            if sy > 0:
+                sq = sq & (+openmc.YPlane(half_length - r) & -openmc.YPlane(half_length))
+            else:
+                sq = sq & (+openmc.YPlane(-half_length) & -openmc.YPlane(-half_length + r))
+            slivers.append(sq & +disc)
+
+        # +Y face notch: corners at (+/- half_length, y_in_T_v)
+        for sx in (+1.0, -1.0):
+            cx = sx * (half_length - r)
+            cy = y_in_T_v + r
+            disc = openmc.ZCylinder(x0=cx, y0=cy, r=r)
+            sq = (+openmc.YPlane(y_in_T_v) & -openmc.YPlane(y_in_T_v + r))
+            if sx > 0:
+                sq = sq & (+openmc.XPlane(half_length - r) & -openmc.XPlane(half_length))
+            else:
+                sq = sq & (+openmc.XPlane(-half_length) & -openmc.XPlane(-half_length + r))
+            slivers.append(sq & +disc)
+
+        # -Y face notch: corners at (+/- half_length, y_in_B_v)
+        for sx in (+1.0, -1.0):
+            cx = sx * (half_length - r)
+            cy = y_in_B_v - r
+            disc = openmc.ZCylinder(x0=cx, y0=cy, r=r)
+            sq = (+openmc.YPlane(y_in_B_v - r) & -openmc.YPlane(y_in_B_v))
+            if sx > 0:
+                sq = sq & (+openmc.XPlane(half_length - r) & -openmc.XPlane(half_length))
+            else:
+                sq = sq & (+openmc.XPlane(-half_length) & -openmc.XPlane(-half_length + r))
+            slivers.append(sq & +disc)
+
+        # Remove slivers from the salt region (so graphite fills them).
+        for sl in slivers:
+            salt_region = salt_region & ~sl
 
     salt_cell = openmc.Cell(name="stringer_notch_salt",
                             fill=salt, region=salt_region)

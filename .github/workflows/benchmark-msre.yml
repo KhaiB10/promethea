@@ -46,6 +46,10 @@ on:
         description: "CGB graphite boron impurity (ppm, total natural B). Default 0.3 (MSRE-Mark-I spec); sweep range 0.1-1.0."
         required: false
         default: "0.3"
+      fillet_radius_cm:
+        description: "Half-channel inner-corner fillet radius (cm). 0 = sharp corners (Phase 1.1.c/d-step1); 0.475 = TM-0728 0.225 fuel-fraction target."
+        required: false
+        default: "0.0"
   push:
     paths:
       - "benchmarks/msre/**"
@@ -58,7 +62,7 @@ on:
 # queue instead of preempt each other, while repeated pushes still
 # cancel stale default runs on the same ref.
 concurrency:
-  group: msre-${{ github.ref }}-${{ github.event_name }}-${{ github.event.inputs.mode || 'homog' }}-${{ github.event.inputs.boron_ppm || '0.3' }}
+  group: msre-${{ github.ref }}-${{ github.event_name }}-${{ github.event.inputs.mode || 'homog' }}-${{ github.event.inputs.boron_ppm || '0.3' }}-${{ github.event.inputs.fillet_radius_cm || '0.0' }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
@@ -130,6 +134,7 @@ jobs:
           BATCHES: ${{ github.event.inputs.batches || '120' }}
           MODE: ${{ github.event.inputs.mode || 'homog' }}
           BORON_PPM: ${{ github.event.inputs.boron_ppm || '0.3' }}
+          FILLET_R: ${{ github.event.inputs.fillet_radius_cm || '0.0' }}
         run: |
           mkdir -p out
           docker run --rm \
@@ -139,6 +144,7 @@ jobs:
             -e PROMETHEA_BATCHES=$BATCHES \
             -e PROMETHEA_MODE=$MODE \
             -e PROMETHEA_BORON_PPM=$BORON_PPM \
+            -e PROMETHEA_FILLET_RADIUS_CM=$FILLET_R \
             -e HOME=/tmp \
             -w /workspace \
             promethea:ci \
@@ -156,6 +162,7 @@ jobs:
             echo "**Particles/batch:** ${{ github.event.inputs.particles || '50000' }}"
             echo "**Batches:** ${{ github.event.inputs.batches || '120' }}"
             echo "**CGB boron (ppm):** ${{ github.event.inputs.boron_ppm || '0.3' }}"
+            echo "**Fillet radius (cm):** ${{ github.event.inputs.fillet_radius_cm || '0.0' }}"
             echo ""
             echo "### k-eff"
             echo '```'
