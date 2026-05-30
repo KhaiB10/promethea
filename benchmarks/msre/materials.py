@@ -3,7 +3,7 @@ benchmarks/msre/materials.py
 
 MSRE material definitions for OpenMC, derived from primary public-domain sources:
   - ORNL-4119, MSRE Design and Operations Report Part III
-  - ORNL-TM-0728, MSRE Fuel Salt Compositions
+  - ORNL-TM-730, MSRE Fuel Salt Compositions
   - Haynes International Hastelloy N alloy spec
 
 All compositions are entered in atom fractions or weight percent as
@@ -79,7 +79,7 @@ def build_fuel_salt(temperature_K: float = BENCHMARK_TEMP_K) -> openmc.Material:
     """
     salt = openmc.Material(name="MSRE fuel salt (LiF-BeF2-ZrF4-UF4)")
     salt.temperature = temperature_K
-    salt.set_density("g/cm3", 2.3275)        # ORNL-TM-0728 at 911 K
+    salt.set_density("g/cm3", 2.3275)        # ORNL-TM-730 at 911 K
 
     # Cation atom fractions from the salt mole-fraction recipe.
     # Each MX_n molecule contributes 1 cation and n F atoms.
@@ -135,7 +135,7 @@ def build_fuel_salt(temperature_K: float = BENCHMARK_TEMP_K) -> openmc.Material:
 B10_ATOM_FRAC = 0.199
 B11_ATOM_FRAC = 1.0 - B10_ATOM_FRAC
 
-# Default boron impurity in MSRE CGB graphite. Robertson 1965 specs <1 ppm;
+# Default boron impurity in MSRE CGB graphite. Haubenreich et al. 1964 specs <1 ppm;
 # 0.3 ppm is the IRPhE / Fratoni nominal. Phase 1.1.d step 3 sweeps this.
 DEFAULT_BORON_PPM = 0.3
 
@@ -420,7 +420,7 @@ def build_all(temperature_K: float = BENCHMARK_TEMP_K, *, irphe: bool = False):
 
     # CGB graphite boron impurity: parameterized for sensitivity sweep.
     # Default 0.3 ppm matches MSRE-Mark-I CGB acceptance spec; range
-    # 0.1-1.0 ppm brackets reported batch variability (TM-0728 Tab. 2.7;
+    # 0.1-1.0 ppm brackets reported batch variability (TM-730 Tab. 2.7;
     # Compere 1975).
     boron_ppm = float(os.environ.get("PROMETHEA_BORON_PPM", DEFAULT_BORON_PPM))
     graphite = build_graphite(temperature_K, boron_ppm=boron_ppm)

@@ -64,9 +64,9 @@ Expected cumulative effect: ~-2000 pcm (negative) bringing v1 down from ~1.04-1.
 
 ---
 
-## Dimensions resolved from ORNL-TM-0728 (MSRE Design Report Part III)
+## Dimensions resolved from ORNL-TM-730 (MSRE Design Report Part III)
 
-Table 3.1 of TM-0728 (the canonical 20-region core model) gives the IRPhE benchmark dimensions in inches. Converted to cm:
+Table 3.1 of TM-730 (the canonical 20-region core model) gives the IRPhE benchmark dimensions in inches. Converted to cm:
 
 | Region | Inner r (cm) | Outer r (cm) | Bottom z (in) | Top z (in) | Composition (vol %) | Identity |
 |---|---:|---:|---:|---:|---|---|
@@ -82,7 +82,7 @@ Key conclusions:
 - Vessel inner radius confirmed at 73.66 cm (29 in), wall 1.42 cm (0.56 in).
 - Bottom head composition 90.8/9.2 confirmed exactly — step 1 lower-head mix is the right number.
 
-## Control rod geometry (ORNL-TM-0728 §4.1, Shen Fig 2)
+## Control rod geometry (ORNL-TM-730 §4.1, Shen Fig 2)
 
 - **Poison cylinder: 1.08 in OD × 0.12 in wall = 2.743 cm OD, 0.305 cm wall, hollow.**
 - Material: 70 wt % Gd2O3 + 30 wt % Al2O3 ceramic.
@@ -183,7 +183,7 @@ For the experimental comparison (k = 0.99978), the +1455 pcm Promethea bias is i
 
 During Phase 1.1.d source audit (`STRINGER_GEOMETRY.md`), we discovered
 that the existing Phase 1.1.b/c lattice modeled each half-channel as
-1.524 cm deep × 1.016 cm long along the face. TM-0728 §2.6 specifies
+1.524 cm deep × 1.016 cm long along the face. TM-730 §2.6 specifies
 0.508 cm deep × 3.048 cm long, matching Shen 2021's full 1.016 × 3.048 cm
 full channels between paired stringers. The channels were rotated 90°
 from the as-built design.
@@ -217,14 +217,14 @@ The fix moved k-eff **down by 125 pcm** (statistically significant,
 
 Vs the Serpent target the gap *widened* (824 pcm), but vs the experimental
 criticality value the gap *narrowed* (1330 pcm). The orientation fix is
-physics-correct (TM-0728 is unambiguous), so the closer-to-experiment
+physics-correct (TM-730 is unambiguous), so the closer-to-experiment
 direction is the trustworthy reading. Worth flagging that Shen 2021's
 +2154 pcm overprediction relative to experiment may itself include some
 geometry approximations we have now removed.
 
 ### Next sub-steps within Phase 1.1.d
 
-1. **Corner rounding of half-channels** — TM-0728 §2.6 says rounding
+1. **Corner rounding of half-channels** — TM-730 §2.6 says rounding
    reduces fuel fraction from 0.240 to 0.225 (~6.25%). Direction: +k
    (less salt + slightly more graphite per cell). Estimated +30-80 pcm.
 2. **CGB graphite B-10 content sweep** (0.1 → 1.0 ppm) to bracket the
@@ -245,7 +245,7 @@ sub-step 2 is the cheapest sensitivity, and sub-step 3 is the long-run.
 Reactor-grade CGB graphite carries a small natural-boron impurity whose
 thermal absorption can move k-eff by several hundred pcm even at
 sub-ppm levels. MSRE-Mark-I CGB acceptance was **≤ 0.3 ppm total
-natural B** (TM-0728 Tab. 2.7); reported batch values run **0.1–1.0 ppm**
+natural B** (TM-730 Tab. 2.7); reported batch values run **0.1–1.0 ppm**
 (Compere 1975, Shen 2021). IRPhE's Serpent benchmark uses a single
 point value, but the document doesn't pin it precisely — so we sweep.
 
@@ -317,7 +317,7 @@ the full sweep as a sensitivity envelope in future writeups.
 
 ### Why
 
-TM-0728 §2.6 explicitly states: "Four half-channels 0.2- by 1.2-in. in
+TM-730 §2.6 explicitly states: "Four half-channels 0.2- by 1.2-in. in
 each 2- by 2-in. graphite block were chosen to give a fuel fraction of
 0.24; rounding the corners of the channels reduced the fraction to
 0.225." Shen 2021 §2 likewise: "channels 1.016 cm by 3.048 cm with
@@ -341,7 +341,7 @@ of sharp-corner runs.
 
 ### Radius selection
 
-Solving for the fillet radius that reproduces TM-0728's 0.240 → 0.225
+Solving for the fillet radius that reproduces TM-730's 0.240 → 0.225
 target across 8 fillets per cell:
 
 \[ 8 r^2 (1 - \pi/4) = (0.240 - 0.225) \cdot 5.08^2 \quad\Longrightarrow\quad r \approx 0.4748\,\text{cm} \]
@@ -360,7 +360,7 @@ Both agree with the 0.225 spec.
 | Geometry | k-eff | σ | Δk vs sharp | CI run |
 |---|---|---|---|---|
 | Sharp corners (baseline) | 1.01308 | 0.00036 | — | [26637499678](https://github.com/KhaiB10/promethea/actions/runs/26637499678) |
-| **r = 0.475 cm (TM-0728)** | **1.01320** | **0.00030** | **+12 ± 47 pcm** | [26671341501](https://github.com/KhaiB10/promethea/actions/runs/26671341501) |
+| **r = 0.475 cm (TM-730)** | **1.01320** | **0.00030** | **+12 ± 47 pcm** | [26671341501](https://github.com/KhaiB10/promethea/actions/runs/26671341501) |
 
 **Δk/σ = 0.26 — statistically null result.**
 
@@ -494,18 +494,18 @@ The ~324 pcm unexplained residual is now the central Phase 1.1.d
 follow-up. Likely candidates, in priority order:
 
 1. **Thimble centering vs hard-coded 7.62 cm offset** — Shen Fig 2
-   shows thimbles inset slightly differently from the TM-0728 nominal
+   shows thimbles inset slightly differently from the TM-730 nominal
    coordinates. A 1-2 cm radial shift on four absorber thimbles can
    easily move k by 100-300 pcm.
 2. **Horizontal lattice cross section at the bottom of the active core**
-   — TM-0728 §2.6 shows the lattice transitioning to a different
+   — TM-730 §2.6 shows the lattice transitioning to a different
    stringer pattern in the lower 5 cm. Our model uses uniform vertical
    stringers; Shen may model the transition.
 3. **Fuel salt composition and density at the Shen reference temperature**
    — re-derive U-235 enrichment, Zr-to-U ratio, and salt density from
-   TM-0728 Tables 2.4-2.6 directly rather than from our cached values.
+   TM-730 Tables 2.4-2.6 directly rather than from our cached values.
 4. **Inconel/INOR-8 thimble cladding thickness** — currently set to
-   the TM-0728 nominal; Shen may use the Fig 2 dimensioned value.
+   the TM-730 nominal; Shen may use the Fig 2 dimensioned value.
 
 Each is a small geometry/composition audit, not a major refactor.
 

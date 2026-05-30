@@ -37,7 +37,7 @@
 ## 3. Model description
 
 ### 3.1 Geometry — heterogeneous CSG
-- Hex stringer lattice, two-channel-per-edge geometry per TM-0728 §2.6.
+- Hex stringer lattice, two-channel-per-edge geometry per TM-730 §2.6.
 - Four thimble positions: three rod thimbles (INOR-8 annulus), one graphite sample assembly (no INOR-8 shell — §3.4 below).
 - Reflector, vessel, lower head, upper plenum.
 
@@ -52,7 +52,7 @@
 - GitHub Actions workflow for one-click reproduction.
 
 ### 3.4 The sample-basket position
-- Direct quotation from TM-0728 §4.1.
+- Direct quotation from TM-730 §4.1.
 - Distinction between "INOR-8 in the basket" (sample rods inside the bore) and "INOR-8 shell around the basket" (a structural thimble that the Promethea v0 model erroneously added).
 - This is the single largest defect we found and the discussion in §6 is anchored on it.
 
@@ -128,11 +128,12 @@
 
 1. Shen, D., Ilas, G., Powers, J. J., Fratoni, M. (2021). NSE 195(8):825-837. DOI:10.1080/00295639.2021.1880850.
 2. Yilmaz, S., Romano, P. K., Chierici, L., Knudsen, E. B., Shriwise, P. C. (2024). Frontiers in Nuclear Engineering 3:1385478. DOI:10.3389/fnuen.2024.1385478.
-3. ORNL-TM-0728: MSRE Design and Operations Report Part III — Nuclear Analysis. Oak Ridge National Laboratory, 1964.
-4. Robertson, R. C. (1965). ORNL-TM-0728 series, Part V — Reactor Safety.
-5. OECD/NEA IRPhE Handbook: MSR-MSRE-RES-001.
-6. Romano, P. K. et al. (2015). OpenMC: A state-of-the-art Monte Carlo code for research and development. Annals of Nuclear Energy 82:90-97.
-7. Leppänen, J. (2015). The Serpent Monte Carlo code. Annals of Nuclear Energy 82:142-150.
+3. Haubenreich, P. N., Engel, J. R., Prince, B. E., Claiborne, H. C. (1964). ORNL-TM-730: MSRE Design and Operations Report Part III — Nuclear Analysis. Oak Ridge National Laboratory, issued 3 February 1964. https://www.osti.gov/biblio/4114686
+4. Robertson, R. C. (1964). ORNL-TM-728: MSRE Design and Operations Report Part I — Description of Reactor Design. Oak Ridge National Laboratory.
+5. Beall, S. E. (1964). ORNL-TM-732: MSRE Design and Operations Report Part V — Safety Analysis. Oak Ridge National Laboratory.
+6. OECD/NEA IRPhE Handbook: MSR-MSRE-RES-001.
+7. Romano, P. K. et al. (2015). OpenMC: A state-of-the-art Monte Carlo code for research and development. Annals of Nuclear Energy 82:90-97.
+8. Leppänen, J. (2015). The Serpent Monte Carlo code. Annals of Nuclear Energy 82:142-150.
 
 ---
 

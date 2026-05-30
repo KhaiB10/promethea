@@ -18,10 +18,18 @@ control-rod thimble positions.
 
 This is inconsistent with both primary sources:
 
-- **ORNL-TM-0728 §4.1** describes the basket position as *"a graphite
-  sample assembly"* with no mention of an INOR-8 shell, in contrast
-  with the control-rod thimbles whose INOR-8 walls are explicitly
-  dimensioned (0.10-in thick, 6.00-in OD annulus representation).
+- **ORNL-TM-730 §4.1** (Haubenreich et al. 1964) describes the basket
+  position as *"a graphite sample assembly"* with no mention of an
+  INOR-8 shell, in contrast with the control-rod thimbles whose INOR-8
+  walls are explicitly dimensioned (0.10-in thick, 6.00-in OD annulus
+  representation).
+- **ORNL-TM-730 §4.2.1** (primary-source endorsement, verified by
+  TM-730 audit 2026-05-30): *"The effect of the graphite sample holder
+  was neglected in these preliminary calculations. Further studies are
+  planned to examine this effect, and also to improve on some of the
+  above approximations."* Promethea's `basket_shell=false` matches the
+  original Haubenreich et al. (1964) methodology, not just the
+  geometric description.
 - **Shen et al. 2021** describes *"three graphite and INOR-8 sample
   baskets"* whose Inconel content is the four 0.635-cm INOR-8 sample
   rods *inside* the basket, not a structural shell around it.
@@ -69,8 +77,8 @@ the basket position's importance. Three contributing factors:
 
 The 1045 pcm worth is consistent with experimental control-rod-worth
 data from the MSRE: the three actual control rods together have a
-total worth of ~5400 pcm (Robertson 1965, MSRE Design and Operations
-Report Part V), so a single INOR-8 shell tube of similar geometry
+total worth of ~5400 pcm (Beall 1964, ORNL-TM-732 Part V Safety Analysis),
+so a single INOR-8 shell tube of similar geometry
 contributing ~1000 pcm of parasitic absorption is dimensionally
 correct.
 
@@ -201,7 +209,7 @@ representations, and compares to Shen-Serpent.
 
 2. **The basket-shell defect is unique to Promethea.** Yilmaz et al.
    2024 explicitly modeled the sample basket as graphite-without-shell
-   (consistent with their citation of TM-0728); they did not report a
+   (consistent with their citation of TM-730); they did not report a
    shell-related overshoot because they never had one. The Promethea
    Suspect-1 finding (+1045 pcm shell defect) is therefore a
    pedagogical/methodological result, not a discovery of new physics.

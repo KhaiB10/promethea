@@ -47,7 +47,7 @@ on:
         required: false
         default: "0.3"
       fillet_radius_cm:
-        description: "Half-channel inner-corner fillet radius (cm). 0 = sharp corners (Phase 1.1.c/d-step1); 0.475 = TM-0728 0.225 fuel-fraction target."
+        description: "Half-channel inner-corner fillet radius (cm). 0 = sharp corners (Phase 1.1.c/d-step1); 0.475 = TM-730 0.225 fuel-fraction target."
         required: false
         default: "0.0"
       xs_library:
@@ -60,7 +60,7 @@ on:
           - endfb-vii.1
           - jeff-3.3
       basket_shell:
-        description: "INOR-8 shell on the sample-basket position. true = Phase 1.1.c default, false = TM-0728 §4.1 'graphite sample assembly' (Suspect-1 audit)."
+        description: "INOR-8 shell on the sample-basket position. true = Phase 1.1.c default, false = TM-730 §4.1 'graphite sample assembly' (Suspect-1 audit)."
         required: false
         default: "true"
         type: choice

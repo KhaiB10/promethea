@@ -16,7 +16,7 @@ Single 5.5 × 5.5 cm window centered on one stringer, sliced at z = 0
 face of the 5.08 × 5.08 cm graphite stringer:
 
 - Each notch is **0.508 cm deep** into the stringer (perpendicular to
-  the face), as TM-0728 §2.6 specifies.
+  the face), as TM-730 §2.6 specifies.
 - Each notch is **3.048 cm long** along the face (parallel to it),
   matching the "1.2 in" dimension.
 - Top/bottom notches are oriented horizontally (long axis along X);

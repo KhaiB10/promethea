@@ -14,13 +14,13 @@ with grooves machined into the centerline of all four faces. Adjacent
 stringers face each other so that two opposing grooves form a full fuel
 channel.
 
-### TM-0728 Section 2.6 (Robertson 1965, ORNL-TM-0728, p. 14)
+### TM-730 Section 2.6 (Haubenreich et al. 1964, ORNL-TM-730, p. 14)
 
 > "Four half-channels 0.2- by 1.2-in. in each 2- by 2-in. graphite block were
 > chosen to give a fuel fraction of 0.24; rounding the corners of the
 > channels reduced the fraction to 0.225."
 
-### TM-0728 Section 3.1 (p. 15)
+### TM-730 Section 3.1 (p. 15)
 
 > "The channeled region of the core consists of 2-in.-square, vertical
 > graphite stringers, with half-channels machined in each face to provide
@@ -37,15 +37,15 @@ channel.
 
 | Quantity | Imperial | SI | Source |
 |---|---|---|---|
-| Stringer side length | 2.0 in | **5.08 cm** | TM-0728 §3.1, Shen 2021 |
-| Stringer pitch (square lattice) | 2.0 in | **5.08 cm** | TM-0728 §3.1 |
-| Half-channel depth into stringer | 0.2 in | **0.508 cm** | TM-0728 §2.6 |
-| Half-channel length along face | 1.2 in | **3.048 cm** | TM-0728 §2.6 |
-| Full channel width (between paired stringers) | 0.4 in | **1.016 cm** | TM-0728 §2.6, Shen 2021 |
-| Full channel length | 1.2 in | **3.048 cm** | TM-0728 §2.6, Shen 2021 |
-| Fuel volume fraction (sharp corners) | — | **0.240** | TM-0728 §2.6 |
-| Fuel volume fraction (rounded corners, as-built) | — | **0.225** | TM-0728 §2.6 |
-| Active core height | 65.53 in | **166.45 cm** | TM-0728 Table 3.1 |
+| Stringer side length | 2.0 in | **5.08 cm** | TM-730 §3.1, Shen 2021 |
+| Stringer pitch (square lattice) | 2.0 in | **5.08 cm** | TM-730 §3.1 |
+| Half-channel depth into stringer | 0.2 in | **0.508 cm** | TM-730 §2.6 |
+| Half-channel length along face | 1.2 in | **3.048 cm** | TM-730 §2.6 |
+| Full channel width (between paired stringers) | 0.4 in | **1.016 cm** | TM-730 §2.6, Shen 2021 |
+| Full channel length | 1.2 in | **3.048 cm** | TM-730 §2.6, Shen 2021 |
+| Fuel volume fraction (sharp corners) | — | **0.240** | TM-730 §2.6 |
+| Fuel volume fraction (rounded corners, as-built) | — | **0.225** | TM-730 §2.6 |
+| Active core height | 65.53 in | **166.45 cm** | TM-730 Table 3.1 |
 
 ## 3. Cross-section sketch (looking down a single stringer)
 
@@ -101,7 +101,7 @@ AND  -0.508 < y < +0.508
 
 This makes each notch **1.524 cm deep × 1.016 cm long**, which is the
 correct channel dimensions **rotated 90°**. The depth and the along-face
-length have been swapped relative to TM-0728.
+length have been swapped relative to TM-730.
 
 ### Effect on fuel volume fraction
 
@@ -153,7 +153,7 @@ Fratoni 2023 of ~+200-500 pcm.
 
 ## 6. Corner rounding (separate sub-step)
 
-The TM-0728 design rounds the channel corners to convert the 0.24 sharp-
+The TM-730 design rounds the channel corners to convert the 0.24 sharp-
 corner fuel fraction to 0.225 as-built. That's a 6.25% reduction in fuel
 volume. Round corners can be modeled in OpenMC as a fillet between the
 two perpendicular notch surfaces, but native OpenMC primitives don't
@@ -193,8 +193,8 @@ sharp corners undershoot, use option 3.
 
 ## 8. Confidence and verification checklist
 
-- [x] Stringer side and pitch verified against TM-0728 §3.1 and Shen 2021
-- [x] Half-channel depth and length verified against TM-0728 §2.6
+- [x] Stringer side and pitch verified against TM-730 §3.1 and Shen 2021
+- [x] Half-channel depth and length verified against TM-730 §2.6
 - [x] Full channel cross-section verified against Shen 2021 explicit
       "1.016 cm by 3.048 cm"
 - [x] Sharp-corner fuel fraction algebra verified: 4 × 0.508 × 3.048 /
@@ -207,7 +207,7 @@ sharp corners undershoot, use option 3.
 ## 9. References
 
 1. Robertson, R. C. (1965). *MSRE Design and Operations Report Part I:
-   Description of Reactor Design.* ORNL-TM-0728. §2.6, §3.1, Table 3.1.
+   Description of Reactor Design.* ORNL-TM-730. §2.6, §3.1, Table 3.1.
    https://www.osti.gov/servlets/purl/4114686
 2. Shen, D. et al. (2017, 2021). *Molten-Salt Reactor Experiment (MSRE)
    Zero-Power First Critical Experiment with U-235.* IRPhE benchmark,

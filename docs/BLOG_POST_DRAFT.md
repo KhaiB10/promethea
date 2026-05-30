@@ -65,7 +65,7 @@ calculation. So that became the project.
 
 Stage one of the build had access to:
 
-- ORNL-TM-0728 (the 1965 MSRE design report, scanned PDF on OSTI.gov)
+- ORNL-TM-730 (the 1965 MSRE design report, scanned PDF on OSTI.gov)
 - Shen et al. 2021 (the comparison paper)
 - The IRPhE handbook entry summary (full evaluation is paywalled
   through OECD/NEA)
@@ -75,14 +75,14 @@ Stage one of the build had access to:
 - Several months of late nights, an LLM pair-programming
   partner, and the willingness to be wrong in public
 
-The MSRE active core is roughly 140 cm × 140 cm — a graphite cylinder
+The MSRE active core is roughly 137 cm in diameter by 168 cm tall — a graphite cylinder
 about the size of a residential refrigerator, with 1,140 vertical fuel
 channels milled through 504 graphite stringer assemblies. The fuel
 salt is LiF-BeF₂-ZrF₄-UF₄, the cladding is INOR-8 (a Hastelloy-N
 predecessor), and the control elements are gadolinium-bearing absorber
 rods in INOR-8 thimbles. Every one of those dimensions, isotopic
 fractions, and material compositions has to be re-derived from the
-TM-0728 report and matched, exactly, to what the model puts on the
+TM-730 report and matched, exactly, to what the model puts on the
 geometry.
 
 ## The wrong answer first
@@ -113,7 +113,7 @@ quantitatively too small.
 
 ## The actual killer
 
-I went back to TM-0728 §4.1 and read the sentence I had skimmed
+I went back to TM-730 §4.1 and read the sentence I had skimmed
 the first three times:
 
 > "Three control-rod thimbles ... The fourth position of the array
@@ -184,7 +184,7 @@ What it does not mean:
   contributing term independently in Phase 1.2.
 - The IRPhE handbook is paywalled; I do not yet have access to the
   evaluator's full geometry write-up to confirm that my dimensional
-  re-derivation from TM-0728 is identical to theirs. Some of the
+  re-derivation from TM-730 is identical to theirs. Some of the
   221 pcm could be that.
 
 ## What's next
@@ -211,7 +211,7 @@ What it does not mean:
 The thing that closed the gap was not a more sophisticated method.
 It was reading the primary source one more time.
 
-I had read TM-0728 §4.1 at least four times before I noticed the
+I had read TM-730 §4.1 at least four times before I noticed the
 "graphite sample assembly" phrase and understood what it meant
 structurally. The literature on what to look for in MSRE-benchmark
 discrepancies kept pointing me at boron and at libraries because

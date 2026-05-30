@@ -4,7 +4,7 @@ The papers and reports that form the intellectual foundation of Promethea. Read 
 
 ## Foundational MSR
 - ORNL-4812 — *MSRE Design and Operations Report* (1972)
-- ORNL-TM-0728 — *MSRE Fuel Salt Compositions*
+- ORNL-TM-730 — *MSRE Fuel Salt Compositions*
 - Briggs, *Molten Salt Reactor Experiment Operating Experience* (1964–1969)
 - Engel et al., *Conceptual Design Characteristics of a Denatured Molten-Salt Reactor* (ORNL/TM-7207, 1980)
 

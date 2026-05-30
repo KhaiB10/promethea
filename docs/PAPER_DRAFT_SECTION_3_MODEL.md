@@ -12,10 +12,11 @@ PAPER_OUTLINE.md until promoted here.
 The Promethea model implements the MSRE first-criticality
 configuration of 1965 June 1 in a fully heterogeneous, three-dimensional
 constructive-solid-geometry (CSG) representation. The active core is
-a graphite cylinder approximately 140 cm in diameter and 165 cm in
-active length, containing 1140 vertical fuel channels organized as a
-hexagonal lattice of two-channel-per-edge stringer assemblies per
-Robertson (1965) Table 2.3 and ORNL-TM-0728 §2.6. The lattice pitch
+a graphite cylinder approximately 137.2 cm (4.5 ft) in diameter and
+167.6 cm (5.5 ft) in active length, containing 1140 vertical fuel
+channels organized as a hexagonal lattice of two-channel-per-edge
+stringer assemblies per Haubenreich et al. (1964, ORNL-TM-730) §2.6
+and Robertson (1964, ORNL-TM-728) Part I. The lattice pitch
 is 5.08 cm (2.00 in) between adjacent stringer centerlines.
 
 Each fuel channel is modeled as a vertical cylindrical bore of radius
@@ -26,11 +27,21 @@ parameterized as a sensitivity-study variable
 k-effective across the 0.0–0.475 cm range, consistent with fuel-
 fraction conservation (§5.2).
 
+We note a known systematic bias in this sharp-corner choice. ORNL-TM-730
+§2 (lines 1756–1761) reports that *"the dimensions of the 0.4-in × 1.2-in
+channels with the 2-in graphite block were chosen to give a fuel
+fraction of 0.24; rounding the corners of the channels reduced the
+fraction to 0.225."* The as-built MSRE therefore had a fuel volume
+fraction of 0.225, while the Promethea canonical configuration with
+`fillet_radius_cm = 0.0` recovers 0.240 — a ~7% over-prediction of
+fuel inventory in the active core. This bias is discussed further
+in §6 and quantified in a planned v0.3.0 as-built sensitivity study.
+
 Four thimble positions occupy the central 7.62 cm-radius circle of
 the active core:
 
 - **Three control-rod thimbles** at the locations specified in
-  Robertson (1965) Fig. 2.4. Each thimble is an INOR-8 annulus of
+  Haubenreich et al. (1964) Fig. 2.4. Each thimble is an INOR-8 annulus of
   inner radius 5.08 cm and outer radius 6.35 cm, modeled at full
   active-core height. In the first-criticality configuration, one
   rod is inserted to 4.4 in below the top of the active region and
@@ -40,14 +51,19 @@ the active core:
   positions.
 
 - **One graphite sample assembly** at the fourth position. Per
-  ORNL-TM-0728 §4.1 ("...three control-rod thimbles. The fourth
+  ORNL-TM-730 §4.1 ("...three control-rod thimbles. The fourth
   position of the array is occupied by a graphite sample assembly"),
   this position is modeled as bulk CGB-grade graphite with no INOR-8
-  shell around the basket exterior. Internal sample-rod hardware is
-  not modeled in the canonical configuration. The decision to omit
-  the basket-exterior INOR-8 shell — and the +1045 pcm reactivity
-  consequence of incorrectly including one — is documented in §5
-  and is the largest single methodology finding of this work.
+  shell around the basket exterior. ORNL-TM-730 §4.2.1 reinforces
+  this choice directly: *"the effect of the graphite sample holder was
+  neglected in these preliminary calculations"*, so the Promethea
+  treatment matches the original Haubenreich et al. (1964)
+  methodology, not just the geometric description in §4.1. Internal
+  sample-rod hardware is not modeled in the canonical configuration.
+  The decision to omit the basket-exterior INOR-8 shell — and the
+  +1045 pcm reactivity consequence of incorrectly including one — is
+  documented in §5 and is the largest single methodology finding of
+  this work.
 
 The active core is surrounded by an INOR-8 vessel of inner radius
 70.5 cm and outer radius 71.1 cm, an upper plenum of helium-fill-gas
@@ -62,7 +78,7 @@ modeled and do not contribute to neutron multiplication.
 ### 3.2.1 Fuel salt
 
 The fuel salt is the ⁷LiF–BeF₂–ZrF₄–UF₄ composition specified in
-ORNL-TM-0728 Table 4.1, with U-235 enrichment 33.0 atom percent and
+ORNL-TM-730 Table 4.1, with U-235 enrichment 33.0 atom percent and
 ⁷Li enrichment 99.99 atom percent. The molar composition is
 
 | Component | mole fraction |
@@ -75,20 +91,20 @@ ORNL-TM-0728 Table 4.1, with U-235 enrichment 33.0 atom percent and
 
 The salt density at the first-criticality temperature of 911 K is
 2.323 g/cm³, with the temperature dependence of density taken from
-ORNL-TM-0728 §5.2 (linear in T over the relevant range). The salt
+ORNL-TM-730 §5.2 (linear in T over the relevant range). The salt
 fills all fuel channels, the gap volume between stringer assemblies,
 and the upper-plenum-to-lower-head riser; total fuel-salt volume in
 the modeled geometry is consistent with the 1.97 m³ critical-charge
-inventory reported in Robertson (1965) §3.
+inventory reported in Robertson (1964, ORNL-TM-728) Part I.
 
 ### 3.2.2 Graphite
 
-The graphite is CGB-grade per ORNL-TM-0728 §2.7, density 1.86 g/cm³,
+The graphite is CGB-grade per ORNL-TM-730 §2.7, density 1.86 g/cm³,
 with natural-boron impurity at 0.3 ± 0.1 ppm by mass. The boron-impurity
 parameter (`PROMETHEA_BORON_PPM`) was confirmed by sensitivity study
 (§5.2) to contribute < 200 pcm to k-effective across the literature
 range 0.1–1.0 ppm; the canonical value of 0.3 ppm is the post-1964
-production-grade specification documented in ORNL-TM-0728 §2.7
+production-grade specification documented in ORNL-TM-730 §2.7
 Table 2.5.
 
 Graphite is also used as the matrix of the sample-basket assembly
@@ -98,7 +114,7 @@ described in §3.1, at the same density and boron content.
 
 The vessel, control-rod thimbles, and other primary-loop structural
 components are INOR-8, a Hastelloy-N predecessor with nominal mass
-composition per ORNL-TM-0728 Table 2.9:
+composition per ORNL-TM-730 Table 2.9:
 
 | Element | mass fraction |
 |---|---:|
@@ -114,7 +130,7 @@ over the operating range and a temperature correction was not applied.
 ### 3.2.4 Other materials
 
 The control-rod absorber is modeled as boron carbide (B₄C) at natural
-boron isotopic abundance, density 2.52 g/cm³, per ORNL-TM-0728
+boron isotopic abundance, density 2.52 g/cm³, per ORNL-TM-730
 §4.3. Helium fill-gas is modeled at 1 atm and 911 K (density
 4.66 × 10⁻⁵ g/cm³).
 
@@ -213,12 +229,12 @@ record for this paper is tagged `v0.2.0` at commit (FILL).
 ## Notes on this draft
 
 - §3.1 numbers (dimensions, density, vessel measurements) need a
-  systematic cross-check pass against ORNL-TM-0728 before submission.
+  systematic cross-check pass against ORNL-TM-730 before submission.
   I have transcribed them from the v0.1.0 Promethea geometry, but a
   second-source verification (the IRPhE handbook entry if obtainable,
-  or Robertson 1965 Part V) is required before any senior reviewer
+  or Beall 1964 Part V Safety Analysis, ORNL-TM-732) is required before any senior reviewer
   signs off.
-- §3.2.1 fuel-salt mole fractions: confirm against ORNL-TM-0728
+- §3.2.1 fuel-salt mole fractions: confirm against ORNL-TM-730
   Table 4.1; my repository has 0.650/0.292/0.050/0.008 but the
   literature variation is large enough (some references put UF₄
   closer to 0.009) that a paper claim needs anchored to a specific

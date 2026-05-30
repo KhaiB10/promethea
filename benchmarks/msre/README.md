@@ -30,8 +30,8 @@ The ~2 % bias in the CSG model is a known artifact of geometric simplifications 
 | Graphite stringer cross-section | 5.08 × 5.08 cm (2 in square) | ORNL-4119 |
 | Fuel channel cross-section | 1.016 × 3.048 cm | Fratoni / IRPhE |
 | Total equivalent fuel channels | ~1,140 | ORNL Pub133245 |
-| Fuel salt composition (carrier) | LiF–BeF₂–ZrF₄ with UF₄ | ORNL-TM-0728 |
-| Fuel salt density at 911 K | 2.3275 g/cm³ | ORNL-TM-0728 |
+| Fuel salt composition (carrier) | LiF–BeF₂–ZrF₄ with UF₄ | ORNL-TM-730 |
+| Fuel salt density at 911 K | 2.3275 g/cm³ | ORNL-TM-730 |
 | U-235 in fuel salt (IRPhE first criticality) | **1.408 wt %** | Fratoni / IRPhE |
 | U-235 enrichment of uranium (IRPhE benchmark) | **31.35 wt %** | Wu 2025 citing IRPhE |
 | U-235 enrichment of uranium (historical ORNL design) | 33.3 wt % | ORNL-4119 |

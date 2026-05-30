@@ -33,7 +33,7 @@ References
 - Yilmaz et al. (2024), Frontiers in Nuclear Engineering, "Criticality
   benchmarking of OpenMC against the Molten Salt Reactor Experiment."
   Published OpenMC CSG result: k = 1.020.
-- ORNL-TM-0728, MSRE Design and Operations Report, Part III.
+- ORNL-TM-730, MSRE Design and Operations Report, Part III.
 
 Acceptance for this heterogeneous v1
 ------------------------------------
@@ -54,7 +54,7 @@ import openmc
 STRINGER_PITCH      = 5.08          # 2 inches square lattice pitch
 STRINGER_SIDE       = 5.08          # stringer is also 2 inches square
 # Half-channel cut into each face of every stringer.
-# TM-0728 §2.6 (Robertson 1965): "Four half-channels 0.2- by 1.2-in. in each
+# TM-730 §2.6 (Haubenreich et al. 1964): "Four half-channels 0.2- by 1.2-in. in each
 # 2- by 2-in. graphite block." Shen et al. 2021: full channels formed between
 # paired faces are 1.016 cm by 3.048 cm.
 #
@@ -64,12 +64,12 @@ STRINGER_SIDE       = 5.08          # stringer is also 2 inches square
 #
 # Two facing half-channels combine into one full channel 1.016 cm wide
 # (= 2 × 0.508) and 3.048 cm long. Sharp-corner fuel fraction:
-#   4 × (0.508 × 3.048) / 5.08² = 6.194 / 25.806 = 0.240 ✓ (TM-0728 §2.6)
+#   4 × (0.508 × 3.048) / 5.08² = 6.194 / 25.806 = 0.240 ✓ (TM-730 §2.6)
 FUEL_CHANNEL_DEPTH  = 0.508         # half-groove depth into stringer (0.2 in)
 FUEL_CHANNEL_LENGTH = 3.048         # half-groove length along face   (1.2 in)
 
-# Half-channel inner-corner rounding (TM-0728 §2.6, Shen 2021).
-# TM-0728: "rounding the corners of the channels reduced the [fuel] fraction
+# Half-channel inner-corner rounding (TM-730 §2.6, Shen 2021).
+# TM-730: "rounding the corners of the channels reduced the [fuel] fraction
 # to 0.225" (from 0.240 for sharp corners). Shen 2021 §2 likewise notes
 # "channels 1.016 cm by 3.048 cm with rounded corners". The two inner
 # corners of each half-channel notch (where the notch floor meets the end
@@ -85,7 +85,7 @@ ACTIVE_CORE_HEIGHT  = 166.446       # IRPhE graphite-active height
 CORE_RADIUS         = 70.168        # IRPhE active-core equivalent radius
 
 # Vessel, core can, and downcomer dimensions
-# All from ORNL-TM-0728 Table 3.1 (20-region IRPhE core model).
+# All from ORNL-TM-730 Table 3.1 (20-region IRPhE core model).
 #
 # Region I (Core can):       r = 27.75 to 28.00 in  =>  70.485 to 71.12 cm
 # Region F (Downcomer):      r = 28.00 to 29.00 in  =>  71.12  to 73.66 cm
@@ -93,9 +93,9 @@ CORE_RADIUS         = 70.168        # IRPhE active-core equivalent radius
 CORE_CAN_IR         = 70.485        # 27.75 in core can inner radius
 CORE_CAN_OR         = 71.12         # 28.00 in core can outer radius (= 56 in OD / 2)
 VESSEL_ID           = 73.66         # 29.00 in vessel inner radius
-VESSEL_WALL         = 1.42          # 0.56 in INOR-8 wall (TM-0728 Region B)
+VESSEL_WALL         = 1.42          # 0.56 in INOR-8 wall (TM-730 Region B)
 
-# Control rod thimble dimensions (ORNL-TM-0728 §4.1).
+# Control rod thimble dimensions (ORNL-TM-730 §4.1).
 # Each thimble has 2.00 in OD x 0.10 in wall = 5.08 cm OD, 0.254 cm wall.
 # (Derived from the homogenized 6.00 in OD x 0.10 in thick annulus that
 # preserves both volume and outside surface area for 3 thimbles.)
@@ -109,19 +109,19 @@ POISON_WALL         = 0.305         # 0.12 in
 POISON_OR           = POISON_OD / 2.0
 POISON_IR           = POISON_OR - POISON_WALL
 
-# Control-rod axial positions (ORNL-TM-0728, Shen et al. 2021).
-# TM-0728 datum: z = 0 at core bottom; active core extends 0 -> 65.53 in =
+# Control-rod axial positions (ORNL-TM-730, Shen et al. 2021).
+# TM-730 datum: z = 0 at core bottom; active core extends 0 -> 65.53 in =
 # 0 -> 166.45 cm. Our model places z = 0 at the *center* of the active core,
-# so TM-0728 z must be shifted by -ACTIVE_CORE_HEIGHT/2 = -83.225 cm to land
+# so TM-730 z must be shifted by -ACTIVE_CORE_HEIGHT/2 = -83.225 cm to land
 # in our datum.
-# - All three rods fully withdrawn:  rod tip at TM-0728 z = 129.54 cm
+# - All three rods fully withdrawn:  rod tip at TM-730 z = 129.54 cm
 #                                    -> our z = +46.315 cm
-# - One rod inserted 4.4 in:         rod tip at TM-0728 z = 118.364 cm
+# - One rod inserted 4.4 in:         rod tip at TM-730 z = 118.364 cm
 #                                    -> our z = +35.139 cm
 ROD_TIP_WITHDRAWN_Z = 129.54 - (ACTIVE_CORE_HEIGHT / 2.0)  # +46.315 cm
 ROD_TIP_INSERTED_Z  = 118.364 - (ACTIVE_CORE_HEIGHT / 2.0) # +35.139 cm
 
-# 2x2 control rod array layout (ORNL-TM-0728 Fig 3.2, Shen Fig 2).
+# 2x2 control rod array layout (ORNL-TM-730 Fig 3.2, Shen Fig 2).
 # Three control rod thimbles and one sample basket are arranged in a
 # square 2x2 pattern around the reactor centerline. Each position sits
 # one stringer pitch off the centerline in both x and y -> rod centers at
@@ -130,7 +130,7 @@ ROD_TIP_INSERTED_Z  = 118.364 - (ACTIVE_CORE_HEIGHT / 2.0) # +35.139 cm
 # three positions. The IRPhE-Fig 3.2 layout shows them slightly separated
 # with the actual center-to-center spacing equal to about 3 pitches —
 # i.e. rod centers at (±1.5 * pitch, ±1.5 * pitch) = (±7.62, ±7.62) cm.
-# That position is consistent with the TM-0728 Table 3.1 Region K
+# That position is consistent with the TM-730 Table 3.1 Region K
 # homogenized thimble annulus at r = 7.37-7.62 cm.
 ROD_ARRAY_OFFSET    = 1.5 * STRINGER_PITCH   # 7.62 cm from centerline on each axis
 VESSEL_OR           = VESSEL_ID + VESSEL_WALL
@@ -194,7 +194,7 @@ def _build_stringer_universe(mats: Dict[str, openmc.Material]) -> openmc.Univers
 
     salt_region = notch_R | notch_L | notch_T | notch_B
 
-    # ---- Inner-corner rounding (TM-0728 §2.6, Shen 2021) -------------------
+    # ---- Inner-corner rounding (TM-730 §2.6, Shen 2021) -------------------
     # The two inner corners of each half-channel notch (where the floor meets
     # the end walls) get filleted with quarter-circle arcs of radius r. We
     # take fuel out of those corners by intersecting the salt region with
@@ -585,14 +585,14 @@ def build_geometry_het_can(mats: Dict[str, openmc.Material]):
     r = 0      ->  70.168 cm:  graphite stringer lattice (in fuel salt)
     r = 70.168 -> 70.485 cm:   thin salt film (0.317 cm; between lattice edge
                                and core can inner radius)
-    r = 70.485 -> 71.12 cm:    core can (INOR-8, 0.635 cm wall, TM-0728 Region I)
-    r = 71.12  -> 73.66 cm:    downcomer salt (TM-0728 Region F)
+    r = 70.485 -> 71.12 cm:    core can (INOR-8, 0.635 cm wall, TM-730 Region I)
+    r = 71.12  -> 73.66 cm:    downcomer salt (TM-730 Region F)
     r = 73.66  -> 75.08 cm:    reactor vessel wall (INOR-8, 1.42 cm)
 
     Axially, the core can spans the active core height (-half_h to +half_h).
     Above and below it, the upper plenum and lower head extend to the
     vacuum boundaries; no can section is modeled inside the heads because
-    TM-0728 Table 3.1 shows region I (core can) bounded by 0 to 65.53 in,
+    TM-730 Table 3.1 shows region I (core can) bounded by 0 to 65.53 in,
     matching the active core.
 
     Expected k-eff delta vs het_lh: roughly -200 to -500 pcm. The INOR-8
@@ -631,14 +631,14 @@ def build_geometry_het_can(mats: Dict[str, openmc.Material]):
         region=(+core_outer & -can_inner & +core_bot & -core_top),
     )
 
-    # Core can: INOR-8 cylindrical shell (TM-0728 Region I)
+    # Core can: INOR-8 cylindrical shell (TM-730 Region I)
     core_can = openmc.Cell(
         name="core_can",
         fill=mats["inor"],
         region=(+can_inner & -can_outer & +core_bot & -core_top),
     )
 
-    # True downcomer: salt annulus from can OD to vessel ID (TM-0728 Region F)
+    # True downcomer: salt annulus from can OD to vessel ID (TM-730 Region F)
     downcomer_cell = openmc.Cell(
         name="core_downcomer",
         fill=mats["salt"],
@@ -677,7 +677,7 @@ def build_geometry_het_rods_out(mats: Dict[str, openmc.Material]):
     Phase 1.1.c step 3: het_can + four explicit control rod thimbles in the
     fully-withdrawn position (rods parked above the active core).
 
-    Layout (ORNL-TM-0728 §4.1, Fig 3.2; Shen et al. 2021 Fig 2)
+    Layout (ORNL-TM-730 §4.1, Fig 3.2; Shen et al. 2021 Fig 2)
     -----------------------------------------------------------
     A 2x2 square array of vertical thimbles centered at
         (+/-7.62, +/-7.62) cm    (ROD_ARRAY_OFFSET = 1.5 * stringer pitch)
@@ -688,7 +688,7 @@ def build_geometry_het_rods_out(mats: Dict[str, openmc.Material]):
     tube + salt bore (no poison present in the active region).
 
     Each thimble:
-        OD = 5.08 cm  (2.00 in, ORNL-TM-0728 §4.1)
+        OD = 5.08 cm  (2.00 in, ORNL-TM-730 §4.1)
         wall = 0.254 cm (0.10 in)
         bore: salt-filled
 
@@ -765,14 +765,14 @@ def build_geometry_het_rods_out(mats: Dict[str, openmc.Material]):
                 & outside_thimbles),
     )
 
-    # Core can: INOR-8 cylindrical shell (TM-0728 Region I)
+    # Core can: INOR-8 cylindrical shell (TM-730 Region I)
     core_can = openmc.Cell(
         name="core_can",
         fill=mats["inor"],
         region=(+can_inner & -can_outer & +core_bot & -core_top),
     )
 
-    # True downcomer: salt annulus from can OD to vessel ID (TM-0728 Region F)
+    # True downcomer: salt annulus from can OD to vessel ID (TM-730 Region F)
     downcomer_cell = openmc.Cell(
         name="core_downcomer",
         fill=mats["salt"],
@@ -872,7 +872,7 @@ def build_geometry_het_baskets(mats: Dict[str, openmc.Material]):
     BASKET_INDEX = 3
 
     # Phase 1.1.e Suspect-1 audit:
-    # TM-0728 §4.1 says the 4th position is occupied by a "graphite sample
+    # TM-730 §4.1 says the 4th position is occupied by a "graphite sample
     # assembly" — it does NOT describe an INOR-8 shell at this position,
     # only at the three control-rod thimble positions. Shen 2021 similarly
     # describes the sample baskets as "graphite and INOR-8 sample baskets"
@@ -1021,16 +1021,16 @@ def build_geometry_het_critical(mats: Dict[str, openmc.Material]):
     Differences from het_baskets:
       - 2 control rod thimbles (positions 0, 1) are plain salt-bore (rods
         fully withdrawn -- poison parked above the active core where it has
-        negligible effect; tip at TM-0728 z = 129.54 cm, our z = +46.315 cm,
+        negligible effect; tip at TM-730 z = 129.54 cm, our z = +46.315 cm,
         i.e. only slightly above core center where the lattice still acts as
         a moderator. The IRPhE Serpent model approximates these withdrawn
         rods as simply absent, so we do the same: empty salt-bore thimbles).
       - 1 control rod thimble (position 2) has the rod inserted 4.4 inches
-        below its withdrawn position. Poison tip at TM-0728 z = 118.364 cm
+        below its withdrawn position. Poison tip at TM-730 z = 118.364 cm
         = our z = +35.139 cm. Poison cylinder extends from the tip upward.
       - 1 sample basket assembly (position 3, same as het_baskets).
 
-    Inserted rod model (per ORNL-TM-0728 sec 4.1, Shen et al. 2021):
+    Inserted rod model (per ORNL-TM-730 sec 4.1, Shen et al. 2021):
       - Hollow Gd2O3/Al2O3 70/30 wt%% poison cylinder:
             OD = 2.743 cm (1.08 in)
             wall = 0.305 cm (0.12 in)

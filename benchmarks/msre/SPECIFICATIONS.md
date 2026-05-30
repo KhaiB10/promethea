@@ -51,7 +51,7 @@ This is the recipe used by `build_fuel_salt()` and the homogenized v0 model. It 
 U-235 enrichment of the uranium: **33.3 wt %**.
 This is the configuration used by `build_fuel_salt_irphe()` and the heterogeneous v1 model.
 
-Density at 911 K (both recipes): **2.3275 ± 0.0160 g/cm³** (ORNL-TM-0728)
+Density at 911 K (both recipes): **2.3275 ± 0.0160 g/cm³** (ORNL-TM-730)
 Operating temperature for benchmark: **911 K** (= 638 °C = 1180 °F)
 
 ## 3. Moderator graphite
@@ -141,7 +141,7 @@ When 8b lands inside its envelope, the toolchain is validated for Phase 1.2 (dig
 ## References
 
 - **ORNL-4119:** *MSRE Design and Operations Report, Part III — Nuclear Analysis*. R.J. Kedl et al. (1965). [osti.gov/servlets/purl/4114686](https://www.osti.gov/servlets/purl/4114686/helpdisclaimer.pdf)
-- **ORNL-TM-0728:** *MSRE Fuel Salt Compositions and Physical Properties*.
+- **ORNL-TM-730:** *MSRE Fuel Salt Compositions and Physical Properties*.
 - **ORNL-4812:** *MSRE Design and Operations Report*.
 - **IRPhE Handbook**, MSR-MSRE-RESR-001, OECD/NEA.
 - **Yilmaz et al. (2024):** *CAD and constructive solid geometry modeling of the Molten Salt Reactor Experiment with OpenMC*. Frontiers in Nuclear Engineering. [frontiersin.org/articles/10.3389/fnuen.2024.1385478](https://www.frontiersin.org/journals/nuclear-engineering/articles/10.3389/fnuen.2024.1385478/full)

@@ -49,7 +49,7 @@ third party without specialised infrastructure.
 The active core is modelled as a hexagonal lattice of graphite
 stringers, each containing two flow channels machined into the
 stringer's edge profile. The half-channel geometry is implemented per
-ORNL-TM-0728 §2.6 with sharp corners (the corner-fillet sensitivity
+ORNL-TM-730 §2.6 with sharp corners (the corner-fillet sensitivity
 study described in §3.2 below establishes that the published 0.225
 fuel-fraction target is recovered to within 0.6% with sharp corners
 and the analytical fuel fraction is independent of corner radius at
@@ -63,17 +63,17 @@ direction):
   INOR-8 annulus (OD 5.08 cm, ID 4.572 cm, full vessel height) with
   a salt-filled bore.
 - One position (the (-x, -y) corner) holds the graphite sample
-  assembly described in ORNL-TM-0728 §4.1, modelled as a bore filled
+  assembly described in ORNL-TM-730 §4.1, modelled as a bore filled
   with a homogenised mixture of graphite bars (5 × 0.635 cm diameter),
   INOR-8 specimens (4 × 0.635 cm diameter), and primary salt over the
   active core height. Per the §4.1 description, **no INOR-8 thimble
   shell is modelled at this position** (see §3.4 below).
 
-The surrounding vessel and reflector regions follow TM-0728 §2.1-2.5.
+The surrounding vessel and reflector regions follow TM-730 §2.1-2.5.
 
 ### 2.2 Materials
 
-- **Primary fuel salt:** ⁷LiF–BeF₂–ZrF₄–UF₄ at the TM-0728 §2.5
+- **Primary fuel salt:** ⁷LiF–BeF₂–ZrF₄–UF₄ at the TM-730 §2.5
   reference composition and density.
 - **Moderator graphite (CGB grade):** density 1.86 g/cm³, with
   natural-boron contamination parameterised by `PROMETHEA_BORON_PPM`
@@ -118,7 +118,7 @@ statistics). The MSRE-Mark-I CGB graphite specification gives
 
 The half-channel inner-corner geometry was extended with an optional
 fillet to test sensitivity to the corner-treatment choice. With
-r = 0.475 cm (chosen to recover the TM-0728 §2.6 0.225 fuel-fraction
+r = 0.475 cm (chosen to recover the TM-730 §2.6 0.225 fuel-fraction
 target):
 
 - Sharp corners (r = 0): k = 1.01308 ± 0.00036
@@ -150,11 +150,17 @@ The dominant defect in the prior baseline configuration was a
 spurious INOR-8 thimble shell at the sample-basket position. The
 Phase 1.1.c step-4 implementation modelled all four 2×2 array
 positions as identical INOR-8 thimble shells (with the basket having
-the homogenised basket-mix bore). ORNL-TM-0728 §4.1 describes the
+the homogenised basket-mix bore). ORNL-TM-730 §4.1 describes the
 fourth position as **"a graphite sample assembly"** with no thimble
 shell; Shen et al. 2021 likewise describe their three sample baskets
 as "graphite and INOR-8 sample baskets" whose Inconel content is
 internal sample rods, not a structural shell.
+
+More directly, ORNL-TM-730 §4.2.1 states explicitly that *"the effect
+of the graphite sample holder was neglected in these preliminary
+calculations"* — the Promethea canonical configuration
+(`basket_shell=false`) therefore matches the original Haubenreich et al.
+(1964) methodology, not just the geometric description in §4.1.
 
 Removing the shell (filling the annulus with primary salt instead of
 INOR-8):
@@ -254,8 +260,10 @@ repository under the MIT license.
 
 ## 7. References
 
-- ORNL-TM-0728: *MSRE Design and Operations Report Part III —
-  Nuclear Analysis*. Oak Ridge National Laboratory, 1964.
+- Haubenreich, P. N., Engel, J. R., Prince, B. E., Claiborne, H. C.
+  (1964). ORNL-TM-730: *MSRE Design and Operations Report Part III —
+  Nuclear Analysis*. Oak Ridge National Laboratory, issued 3 February 1964.
+  https://www.osti.gov/biblio/4114686
 - Shen, D., Ilas, G., Powers, J. J., Fratoni, M. (2021).
   "Reactor Physics Benchmark of the First Criticality in the Molten
   Salt Reactor Experiment." *Nuclear Science and Engineering*,
@@ -264,8 +272,10 @@ repository under the MIT license.
   P. C. (2024). "CAD and constructive solid geometry modeling of the
   Molten Salt Reactor Experiment with OpenMC." *Frontiers in Nuclear
   Engineering*, 3:1385478. DOI: 10.3389/fnuen.2024.1385478.
-- Robertson 1965: *MSRE Design and Operations Report Part V —
-  Reactor Safety*. Oak Ridge National Laboratory.
+- Robertson, R. C. (1964). ORNL-TM-728: *MSRE Design and Operations
+  Report Part I — Description of Reactor Design*. Oak Ridge National Laboratory.
+- Beall, S. E. (1964). ORNL-TM-732: *MSRE Design and Operations
+  Report Part V — Safety Analysis*. Oak Ridge National Laboratory.
 - IRPhE Handbook: OECD/NEA *International Handbook of Evaluated
   Reactor Physics Benchmark Experiments*, MSR-MSRE-RES-001.
 
@@ -295,3 +305,12 @@ repository under the MIT license.
    thickness; lower-core lattice). Report any deltas exceeding 50 pcm.
 6. Confirm all figures referenced are reproducible from `make_plot.py`
    scripts in the plots directories.
+7. Fuel-fraction systematic bias (v0.3.0 work): the canonical
+   configuration uses sharp corners (`fillet_radius_cm = 0.0`) and
+   recovers f = 0.240, but ORNL-TM-730 §2 states the as-built MSRE
+   used rounded corners with f = 0.225. This represents a ~7%
+   over-prediction of fuel inventory and is expected to depress
+   k-effective by a measurable amount toward the experimental value.
+   The submission text acknowledges this as a known bias of the
+   canonical configuration; a follow-on rounded-corner run with
+   f = 0.225 will quantify the magnitude before v0.3.0.
