@@ -16,6 +16,8 @@ Reference k-eff target (CSG, ENDF/B-VIII.0): ~1.020 ± 0.002.
 """
 from __future__ import annotations
 
+import os
+
 import openmc
 
 # ---------------------------------------------------------------------------
@@ -129,17 +131,36 @@ def build_fuel_salt(temperature_K: float = BENCHMARK_TEMP_K) -> openmc.Material:
 # Moderator graphite (CGB grade)
 # ---------------------------------------------------------------------------
 
-def build_graphite(temperature_K: float = BENCHMARK_TEMP_K) -> openmc.Material:
+# Natural B-10 atom fraction in natural boron (ENDF/B-VIII.0 default).
+B10_ATOM_FRAC = 0.199
+B11_ATOM_FRAC = 1.0 - B10_ATOM_FRAC
+
+# Default boron impurity in MSRE CGB graphite. Robertson 1965 specs <1 ppm;
+# 0.3 ppm is the IRPhE / Fratoni nominal. Phase 1.1.d step 3 sweeps this.
+DEFAULT_BORON_PPM = 0.3
+
+
+def build_graphite(
+    temperature_K: float = BENCHMARK_TEMP_K,
+    boron_ppm: float = DEFAULT_BORON_PPM,
+) -> openmc.Material:
     """
     Nuclear-grade CGB graphite used as MSRE moderator stringers.
     Includes a small boron impurity (the dominant neutronic effect).
+
+    Args:
+        boron_ppm: total natural boron content in atomic ppm of C. Split into
+            B-10 (~19.9%) and B-11 (~80.1%) by natural abundance.
     """
-    g = openmc.Material(name="MSRE CGB graphite")
+    b_atom_frac = boron_ppm * 1.0e-6  # total B atoms per C atom
+    b10 = b_atom_frac * B10_ATOM_FRAC
+    b11 = b_atom_frac * B11_ATOM_FRAC
+    g = openmc.Material(name=f"MSRE CGB graphite (B={boron_ppm:.2f} ppm)")
     g.temperature = temperature_K
     g.set_density("g/cm3", 1.87)      # IRPhE nominal (Fratoni)
-    g.add_element("C", 0.9999997)     # by atom fraction
-    g.add_nuclide("B10", 0.06e-6)     # ~0.3 ppm natural B by weight
-    g.add_nuclide("B11", 0.24e-6)
+    g.add_element("C", 1.0 - b_atom_frac)     # by atom fraction
+    g.add_nuclide("B10", b10)
+    g.add_nuclide("B11", b11)
     g.add_s_alpha_beta("c_Graphite")
     return g
 
@@ -281,12 +302,18 @@ def build_sample_basket_mix(temperature_K: float = BENCHMARK_TEMP_K,
     # openmc.Material.mix_materials refuses to mix materials carrying S(a,b)
     # tables. We re-attach c_Graphite on the resulting homogenized mix so the
     # carbon nuclides still see graphite thermal scattering kernels.
+    # Use the same boron concentration as the standalone graphite material
+    # so the basket mix is self-consistent across boron sweeps.
+    boron_ppm = float(os.environ.get("PROMETHEA_BORON_PPM", DEFAULT_BORON_PPM))
+    b_atom_frac = boron_ppm * 1.0e-6
+    b10 = b_atom_frac * B10_ATOM_FRAC
+    b11 = b_atom_frac * B11_ATOM_FRAC
     base_graf = openmc.Material(name="MSRE CGB graphite (no S(a,b), for mixing)")
     base_graf.temperature = temperature_K
     base_graf.set_density("g/cm3", 1.87)
-    base_graf.add_element("C", 0.9999997)
-    base_graf.add_nuclide("B10", 0.06e-6)
-    base_graf.add_nuclide("B11", 0.24e-6)
+    base_graf.add_element("C", 1.0 - b_atom_frac)
+    base_graf.add_nuclide("B10", b10)
+    base_graf.add_nuclide("B11", b11)
     mix = openmc.Material.mix_materials(
         [base_salt, base_inor, base_graf],
         [salt_vol_frac, inor_vol_frac, graphite_vol_frac],
@@ -390,9 +417,18 @@ def build_all(temperature_K: float = BENCHMARK_TEMP_K, *, irphe: bool = False):
     0.9 mol % UF4 recipe is used.
     """
     salt = build_fuel_salt_irphe(temperature_K) if irphe else build_fuel_salt(temperature_K)
+
+    # CGB graphite boron impurity: parameterized for sensitivity sweep.
+    # Default 0.3 ppm matches MSRE-Mark-I CGB acceptance spec; range
+    # 0.1-1.0 ppm brackets reported batch variability (TM-0728 Tab. 2.7;
+    # Compere 1975).
+    boron_ppm = float(os.environ.get("PROMETHEA_BORON_PPM", DEFAULT_BORON_PPM))
+    graphite = build_graphite(temperature_K, boron_ppm=boron_ppm)
+    graphite.name = f"CGB graphite (B={boron_ppm:.2f} ppm)"
+
     mats = {
         "salt":     salt,
-        "graphite": build_graphite(temperature_K),
+        "graphite": graphite,
         "inor":     build_inor8(temperature_K),
         "helium":   build_helium(temperature_K),
         "bushing":  build_control_bushing(),

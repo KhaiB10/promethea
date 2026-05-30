@@ -42,6 +42,10 @@ on:
         description: "Total batches (default 120)"
         required: false
         default: "120"
+      boron_ppm:
+        description: "CGB graphite boron impurity (ppm, total natural B). Default 0.3 (MSRE-Mark-I spec); sweep range 0.1-1.0."
+        required: false
+        default: "0.3"
   push:
     paths:
       - "benchmarks/msre/**"
@@ -122,6 +126,7 @@ jobs:
           PARTICLES: ${{ github.event.inputs.particles || '50000' }}
           BATCHES: ${{ github.event.inputs.batches || '120' }}
           MODE: ${{ github.event.inputs.mode || 'homog' }}
+          BORON_PPM: ${{ github.event.inputs.boron_ppm || '0.3' }}
         run: |
           mkdir -p out
           docker run --rm \
@@ -130,6 +135,7 @@ jobs:
             -e PROMETHEA_PARTICLES=$PARTICLES \
             -e PROMETHEA_BATCHES=$BATCHES \
             -e PROMETHEA_MODE=$MODE \
+            -e PROMETHEA_BORON_PPM=$BORON_PPM \
             -e HOME=/tmp \
             -w /workspace \
             promethea:ci \
@@ -146,6 +152,7 @@ jobs:
             echo "**Mode:** ${{ github.event.inputs.mode || 'homog' }}"
             echo "**Particles/batch:** ${{ github.event.inputs.particles || '50000' }}"
             echo "**Batches:** ${{ github.event.inputs.batches || '120' }}"
+            echo "**CGB boron (ppm):** ${{ github.event.inputs.boron_ppm || '0.3' }}"
             echo ""
             echo "### k-eff"
             echo '```'
