@@ -238,11 +238,15 @@ an open OpenMC pipeline can extend from "verifies a 1965 experiment"
 to "verifies a 1968 design that was never built." v0.4.0 will be
 the first public, CI-validated, two-fluid Molten-Salt Breeder Reactor
 (MSBR) neutronics model, validated against Robertson/Briggs/Smith/
-Bettis 1968 (ORNL-4528). The two-fluid variant has not been openly
-recomputed in modern Monte Carlo since the original ORNL work; this
-is the contribution. Scope is BOL k-eff + breeding ratio only — no
-reprocessing, no depletion, no thermal-hydraulics. Those come in
-v0.5.0+ as separately scoped milestones.
+Bettis 1968 (ORNL-4528). The two-fluid variant was abandoned by ORNL
+in 1967 due to graphite-element fabrication concerns and has not
+been openly recomputed in modern Monte Carlo since. Primary-source
+validation anchors from ORNL-4528 Tables 6.2 and 6.8: breeding ratio
+1.06; specific inventory 1.26 kg fissile/MWe; mean η of 233U = 2.225;
+overall temperature coefficient −4.34×10⁻⁵ /°K @ 900K. Scope is BOL
+k-eff + breeding ratio + neutron balance only — no reprocessing, no
+depletion, no thermal-hydraulics. Those come in v0.5.0+ as separately
+scoped milestones.
 
 ## What I learned
 
