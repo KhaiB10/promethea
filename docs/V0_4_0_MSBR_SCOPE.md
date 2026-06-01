@@ -16,11 +16,29 @@ work is methodologically complete. Continuing to polish MSRE is
 diminishing returns. The next-order question — and the one no public
 open-source project has answered — is **the Molten-Salt Breeder Reactor**.
 
-MSBR is the 1971 ORNL conceptual design (1000 MWe, two-fluid, Th-U
-breeder) documented in ORNL-4541 (Robertson, 1971). It was never built.
-Every thorium advocacy argument cites it. **No public, CI-validated
-neutronics model of MSBR exists anywhere.** Promethea v0.4.0 will be
-the first.
+MSBR refers to a family of ORNL conceptual designs (~1000 MWe class,
+Th-U breeder). Two distinct variants exist in the primary literature:
+
+- **Two-fluid MSBR** (ORNL-4528, Robertson/Briggs/Smith/Bettis, 1968):
+  separate fuel and blanket salts in interpenetrating graphite
+  channels. Higher theoretical breeding ratio but ORNL ultimately
+  abandoned this variant because the two-fluid graphite element
+  fabrication was judged impractical at the time.
+- **Single-fluid MSBR** (ORNL-4541, Robertson, 1971): combined fissile
+  and fertile in one salt. ORNL's final recommended design. Lower
+  breeding ratio but mechanically tractable.
+
+**v0.4.0 targets the two-fluid variant (ORNL-4528).** Rationale: the
+single-fluid design has been recomputed openly several times (it is
+essentially "a different MSRE"); the two-fluid graphite-element
+neutronics has not. Modeling the abandoned variant openly is the
+uniquely useful contribution — it lets the community ask, with modern
+tools, whether the 1968 fabrication concern is the true limit on
+breeding performance, or whether the physics case for the two-fluid
+layout deserves a second look.
+
+No public, CI-validated two-fluid MSBR neutronics model exists
+anywhere. Promethea v0.4.0 will be the first.
 
 ---
 
@@ -69,10 +87,21 @@ to MSRE basket but more complex.
 - Power density distribution (radial + axial)
 - Fuel salt vs blanket salt fluence split
 
-### Validation targets
-- Robertson 1971 ORNL-4541 design values: k-eff, BR
-- Any subsequent published recomputes (target: 2-4 references)
-- Acceptable agreement band: ±500 pcm on k-eff, ±0.02 on BR
+### Validation targets (revised 2026-06-01 after literature survey)
+
+**Primary:** Robertson/Briggs/Smith/Bettis 1968 ORNL-4528 design values: k-eff, BR
+
+**Independent recomputes available for cross-validation:**
+1. Singh/Lish/Chvála/Upadhyaya 2017 (Nuclear Engineering and Technology, DOI 10.1016/J.NET.2017.06.003) — dynamic model "revised to accurately reflect the design exemplified in ORNL-4528"
+2. Singh/Lish/Wheeler/Chvála/Upadhyaya 2018 (Nuclear Technology, DOI 10.1080/00295450.2017.1416879) — expanded dynamic modeling and performance analysis
+3. Nezhad et al. 2022 MSiBR (Annals of Nuclear Energy) — thorium-fueled two-fluid molten-salt iso-breeder "similar to the two-fluid MSBR documented in ORNL-4528"
+4. Feng/Cao/Davidson/Betzler 2021 (ANL+ORNL, OSTI 1826364) — Shift code applied to detailed MSBR model with explicit geometries
+5. Kasten/Bettis et al. 1969 (Nuclear Engineering and Design, DOI 10.1016/0029-5493(69)90057-0) — graphite behavior and MSBR performance, contemporary recompute work
+
+**Acceptable agreement bands:**
+- k-eff: ±500 pcm vs ORNL-4528 design value
+- BR: ±0.02 vs ORNL-4528 design value
+- Cross-check: agreement with Singh/Chvála dynamic-model BOL state within same bands
 
 ### Explicit non-goals for v0.4.0
 - **No continuous reprocessing.** BOL snapshot only. Pa-233 removal,
@@ -137,7 +166,9 @@ v0.4.0 ships when:
 
 ## Open questions to resolve before kickoff
 
-1. ORNL-4541 PDF acquisition — is the OSTI version complete or do we need NRC/IAEA microfiche?
-2. ENDF/B-VIII.0 thermal scattering library coverage for graphite at MSBR operating temps (~700°C) vs MSRE (~650°C)
-3. Two-fluid CSG approach: nested universes per unit cell, or lattice-of-lattices?
-4. BR calculation tally setup in OpenMC — verify reaction-rate tally approach matches Robertson methodology
+1. ~~ORNL-4541 PDF acquisition~~ — **RESOLVED 2026-06-01.** ORNL-4528 (two-fluid, our primary) and ORNL-4541 (single-fluid, secondary reference) both openly hosted: ORNL-4528 via OSTI biblio/4093364; ORNL-4541 via flibe.com/public PDF mirror + UNT Digital Library.
+2. ~~ENDF/B-VIII.0 graphite thermal scattering coverage~~ — **RESOLVED 2026-06-01.** S(α,β) graphite tables exist at 700K, 800K, 1000K, 1200K, 1600K (LANL NJOY processing, LA-UR-18-25096). MSBR operating temp ~973K (700°C) brackets cleanly. Use grph10.86t (800K) and grph10.87t (1000K) for interpolation, or 1000K directly.
+3. Two-fluid CSG approach: nested universes per unit cell, or lattice-of-lattices? **Open.** Prototype both on a simplified 2D slice before committing.
+4. BR calculation tally setup in OpenMC — verify reaction-rate tally approach matches ORNL-4528 methodology. **Open.** Needs ORNL-4528 read-through first.
+5. ~~Survey the literature for prior two-fluid MSBR recomputes~~ — **RESOLVED 2026-06-01.** At least 5 prior modeling efforts touch ORNL-4528: Singh/Lish/Chvála 2017+2018 (UTK, dynamics), Nezhad 2022 MSiBR (Annals of Nuclear Energy), Feng/Cao/Davidson/Betzler 2021 (ANL+ORNL, Shift). Validation strategy is "agreement with ORNL-4528 + cross-check against ≥2 independent recomputes" — strong defensive posture.
+6. **NEW:** Confirm with Chvála (UTK) whether his group's static neutronics inputs to the 2017/2018 dynamic model are publicly available. If yes, that's a direct numerical comparison target. If no, Promethea v0.4.0 becomes the *first public* static neutronics for ORNL-4528 — strictly stronger contribution claim.
