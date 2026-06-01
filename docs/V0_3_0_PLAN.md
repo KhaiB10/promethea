@@ -106,7 +106,13 @@ statistics and produced a reasonable k-eff). No new code paths.
 
 ## Workstream B — Multi-seed statistical envelope
 
-### Code change required
+**Status: plumbing shipped 2026-06-01 (commit 1f171af). Verification confirmed.**
+- seed=1 verify (5k×30): k = 1.02799 ± 0.00363 (run 26740590652)
+- seed=2 verify (5k×30): k = 1.02695 ± 0.00324 (run 26740599527)
+- Means ~104 pcm apart, within mutual 1σ → plumbing works, RNG is reseeding correctly.
+- Next: dispatch the 5-seed envelope at 50k×120 to produce σ_seed for the Romano-facing claim.
+
+### Code change required (DONE)
 
 Add a `PROMETHEA_SEED` env var that maps to `openmc.Settings.seed`,
 plus a corresponding workflow input. Insertion point is
