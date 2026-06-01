@@ -68,18 +68,26 @@ Static, beginning-of-life (BOL), two-fluid MSBR k-eff and breeding
 ratio model, validated against Robertson 1971 design values within
 documented uncertainty bands.
 
-### Geometry (the hard part)
-- Inner fuel salt region: LiF-BeF2-UF4-ThF4 (fissile, no Th)
-- Graphite moderator with two-fluid passages (fuel channels + blanket channels)
-- Outer blanket salt region: LiF-BeF2-ThF4 (fertile, no U)
-- INOR-8 / Hastelloy-N structural envelope
-- Reflector and vessel per ORNL-4541 Chapter 3
+### Geometry — reference design (ORNL-4528 §5.1, Table 5.1)
+Reactor module @ 20 kw/liter, 556 MWt (4× modules per 1000 MWe plant):
+- Core: 10 ft diam × 13 ft 3 in tall
+- 420 fuel cells on 5 3/8 in HEX triangular pitch; 252 blanket cells (5 3/8 in × 3 1/16 in ID)
+- Fuel cell unit (Fig 6.7): outer hex tube 5 3/8 in across flats, 2 23/32 in bore; concentric inner tube 2¼ in OD × 1¼ in ID (fuel down inner bore, up annulus)
+- Core volume fractions: 0.802 graphite, 0.134 fuel salt, 0.064 blanket salt
+- Blanket region volume fractions: 0.58 salt, 0.42 graphite
+- Reflector: 6 in (0.5 ft)
+- Vessel: Hastelloy N
 
-The graphite element design is the novel CSG work. MSRE was single
-stringer with uniform passage. MSBR has interpenetrating fuel and
-blanket flow channels through the same graphite block. CSG
-representation will require a unit-cell repeating pattern, similar
-to MSRE basket but more complex.
+### Salts (ORNL-4528 Table 3.1)
+- **Fuel salt:** 7LiF–BeF2–233UF4 (68.5–31.3–0.2 mol%), ρ ≈ 127 lb/ft³ @ 1150°F, T_liq = 842°F
+- **Blanket salt:** 7LiF–ThF4–BeF2 (71–27–2 mol%), ρ ≈ 277 lb/ft³ @ 1200°F, T_liq = 1040°F
+- Coolant salt (not in neutronics model): NaBF4–NaF (92–8 mol%)
+
+### CSG approach
+The novel work is the unit-cell. MSRE was a single stringer with uniform
+passage; MSBR has nested fuel + blanket flow channels in the same
+graphite block. Either nested universes per unit cell, or lattice-of-lattices.
+Decision deferred to prototyping (see open questions §3).
 
 ### Physics targets
 - k-eff at BOL ± documented uncertainty
@@ -98,9 +106,21 @@ to MSRE basket but more complex.
 4. Feng/Cao/Davidson/Betzler 2021 (ANL+ORNL, OSTI 1826364) — Shift code applied to detailed MSBR model with explicit geometries
 5. Kasten/Bettis et al. 1969 (Nuclear Engineering and Design, DOI 10.1016/0029-5493(69)90057-0) — graphite behavior and MSBR performance, contemporary recompute work
 
+**Primary-source anchors (ORNL-4528 Tables 6.2 + 6.8):**
+- **Breeding ratio: 1.06**
+- **Specific inventory: 1.26 kg fissile/MWe** (315 kg fissile per 1000 MWe plant)
+- **Specific power: 1.77 MWt/kg fissile**
+- **Power density: 19 kW/liter gross, 140 kW/liter in fuel salt**
+- **Fissions in fuel stream: 0.996**; thermal-group fission fraction: 0.846
+- **Mean η of 233U: 2.225**; mean η of 235U: 1.981
+- **Temperature coefficient (overall): −4.34 × 10⁻⁵ /°K @ 900K** (moderator +1.66, fertile +2.05, fuel −8.05)
+- **Neutron production per fissile absorption (η̄ε): 2.22**
+- **Full neutron balance** to 0.1% per nuclide (Table 6.3) — direct tally validation target
+
 **Acceptable agreement bands:**
-- k-eff: ±500 pcm vs ORNL-4528 design value
-- BR: ±0.02 vs ORNL-4528 design value
+- k-eff: ±500 pcm (this is a critical reactor; k=1 is the design point)
+- BR: ±0.02 vs ORNL-4528 design value 1.06
+- Temperature coefficient: ±20% on overall, sign-correct on all three components
 - Cross-check: agreement with Singh/Chvála dynamic-model BOL state within same bands
 
 ### Explicit non-goals for v0.4.0
@@ -169,6 +189,6 @@ v0.4.0 ships when:
 1. ~~ORNL-4541 PDF acquisition~~ — **RESOLVED 2026-06-01.** ORNL-4528 (two-fluid, our primary) and ORNL-4541 (single-fluid, secondary reference) both openly hosted: ORNL-4528 via OSTI biblio/4093364; ORNL-4541 via flibe.com/public PDF mirror + UNT Digital Library.
 2. ~~ENDF/B-VIII.0 graphite thermal scattering coverage~~ — **RESOLVED 2026-06-01.** S(α,β) graphite tables exist at 700K, 800K, 1000K, 1200K, 1600K (LANL NJOY processing, LA-UR-18-25096). MSBR operating temp ~973K (700°C) brackets cleanly. Use grph10.86t (800K) and grph10.87t (1000K) for interpolation, or 1000K directly.
 3. Two-fluid CSG approach: nested universes per unit cell, or lattice-of-lattices? **Open.** Prototype both on a simplified 2D slice before committing.
-4. BR calculation tally setup in OpenMC — verify reaction-rate tally approach matches ORNL-4528 methodology. **Open.** Needs ORNL-4528 read-through first.
+4. ~~BR calculation tally setup in OpenMC~~ — **RESOLVED 2026-06-01.** ORNL-4528 §6.1 reports BR as neutron production per fissile absorption (η̄ε = 2.22) minus losses, with full per-nuclide neutron balance to 0.1%. OpenMC implementation: reaction-rate tallies on 232Th, 233Pa, 233U, 234U, 235U separated by region; BR = (n,γ) on 232Th + (n,γ) on 233Pa - 233U absorption losses, normalized per fissile absorption. Table 6.3 is the direct comparison target.
 5. ~~Survey the literature for prior two-fluid MSBR recomputes~~ — **RESOLVED 2026-06-01.** At least 5 prior modeling efforts touch ORNL-4528: Singh/Lish/Chvála 2017+2018 (UTK, dynamics), Nezhad 2022 MSiBR (Annals of Nuclear Energy), Feng/Cao/Davidson/Betzler 2021 (ANL+ORNL, Shift). Validation strategy is "agreement with ORNL-4528 + cross-check against ≥2 independent recomputes" — strong defensive posture.
 6. **NEW:** Confirm with Chvála (UTK) whether his group's static neutronics inputs to the 2017/2018 dynamic model are publicly available. If yes, that's a direct numerical comparison target. If no, Promethea v0.4.0 becomes the *first public* static neutronics for ORNL-4528 — strictly stronger contribution claim.
