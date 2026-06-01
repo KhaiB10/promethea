@@ -1,7 +1,16 @@
-# Promethea v0.4.0 — Scope Decision
+# Promethea v0.4.0 — Scope Decision (SUPERSEDED)
 
-**Status:** drafted 2026-05-31, post-v0.2.0 tag and v0.3.0 plan
-**Target window:** 2026-Q3 (after v0.3.0 closes the rounded-corner sensitivity and multi-seed envelope work)
+**Status:** SUPERSEDED 2026-06-01 by docs/V0_4_0_MSBR_SCOPE.md
+**Original draft:** 2026-05-31, post-v0.2.0 tag and v0.3.0 plan
+**Target window (original):** 2026-Q3 (after v0.3.0 closes the rounded-corner sensitivity and multi-seed envelope work)
+
+> **Note:** This document recommended Option 1 (TSUNAMI S/U analysis) as the
+> v0.4.0 deliverable. That recommendation has been superseded by the decision
+> to pivot v0.4.0 to MSBR two-fluid neutronics. The S/U vs CAD tooling decision
+> is not abandoned — it returns as a sub-decision during MSBR geometry work.
+> See `docs/V0_4_0_MSBR_SCOPE.md` for the current v0.4.0 plan.
+>
+> Historical record retained below.
 
 ---
 
