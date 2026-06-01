@@ -431,3 +431,80 @@ locked, TM-730 primary-source audit clean, documentation drafts in
 place. Tagging v0.2.0 next.
 
 ---
+
+## 2026-05-31 / 2026-06-01 — v0.2.0 release + v0.3.0 + v0.4.0 pivot to MSBR
+
+### v0.2.0 release shipped
+
+v0.2.0 tagged and released on GitHub with both canonical run values
+locked: VIII.0 k = 1.02364 ± 0.00016, VII.1 library-matched k =
+1.02202 ± 0.00019. TM-730 citation audit pushed (e4fd5b1).
+Release notes finalize submission-of-record posture for the MSRE
+work and document the ~7% as-built rounded-corner fuel-fraction bias
+as a known limitation, with quantification deferred to v0.3.0.
+
+### v0.3.0 scope
+
+Three workstreams:
+- **A. Rounded-corner sensitivity run** — re-run het_critical with
+  fillet_radius_cm = 0.475 (recovers TM-730 §2 as-built fuel fraction
+  f = 0.225 vs sharp-corner f = 0.240). Dispatched run 26740638111
+  (50k particles × 120 batches).
+- **B. Seed envelope plumbing** — added `PROMETHEA_SEED` env var
+  to `benchmarks/msre/run_criticality.py` (lines 142–160) with input
+  validation (seed ≥ 1) and OpenMC's default seed=1 preserved when
+  unset. Workflow `benchmark-msre.yml` gained a `seed` dispatch input
+  and threads it through Docker as `-e PROMETHEA_SEED=$SEED`.
+  Verified end-to-end with seed=2 verification run (26740599527):
+  k = 1.02695 ± 0.00324, statistically distinguishable from typical
+  seed=1 values — plumbing confirmed working (commit 1f171af).
+- **C. Five-seed envelope** — planned next, will dispatch seeds 2–6
+  at 50k×120 and report mean + spread vs the seed=1 canonical.
+
+### v0.4.0 pivot — Two-fluid MSBR
+
+After v0.2.0 closed, the question was raised: is MSRE-polish work
+worth continuing, or should v0.4.0 take a bigger swing? The decision
+was to pivot.
+
+**Direction chosen:** two-fluid Molten-Salt Breeder Reactor
+neutronics, primary source ORNL-4528 (Robertson, Briggs, Smith,
+Bettis, *Two-Fluid Molten-Salt Breeder Reactor Design Study*, status
+as of January 1, 1968). The two-fluid variant was ORNL's earlier
+design, ultimately abandoned in 1967 in favor of the single-fluid
+configuration (ORNL-4541, 1971) due to two-fluid graphite element
+fabrication concerns. No public, CI-validated two-fluid MSBR
+neutronics model exists — the unique contribution is modeling the
+abandoned variant openly so the community can ask, with modern
+tools, whether the 1968 fabrication concern is the true limit on
+breeding performance.
+
+**Validation strategy:** five independent prior recomputes touch
+ORNL-4528 (Singh/Lish/Chválá 2017+2018 UTK dynamic modeling,
+Nezhad 2022 MSiBR, Feng/Cao/Davidson/Betzler 2021 ANL+ORNL Shift,
+Kasten/Bettis 1969 graphite). "Agreement with ORNL-4528 + cross-check
+against ≥2 independent recomputes" is the defensive posture.
+
+**Primary-source anchors (from ORNL-4528 §6 read-through):**
+- Core: 10 ft diam × 13 ft 3 in tall; 420 fuel cells + 252 blanket
+  cells on 5 3/8 in HEX pitch.
+- Core volume fractions: 0.802 graphite / 0.134 fuel salt / 0.064
+  blanket salt.
+- Fuel salt: 7LiF–BeF2–233UF4 (68.5–31.3–0.2 mol%), Table 3.1.
+- Blanket salt: 7LiF–ThF4–BeF2 (71–27–2 mol%), Table 3.1.
+- **BR = 1.06**, specific inventory 1.26 kg fissile/MWe, specific
+  power 1.77 MWt/kg fissile, mean η of 233U = 2.225 (Table 6.2).
+- **Temperature coefficient: overall −4.34 × 10⁻⁵ /°K @ 900K**
+  (moderator +1.66, fertile +2.05, fuel −8.05) — Table 6.8.
+- Full per-nuclide neutron balance to 0.1% (Table 6.3) — direct
+  tally validation target.
+
+**Co-author dossier change:** Chválá (UTK) promoted from MSRE backup
+to v0.4.0 primary co-author candidate — he co-authored both Singh
+2017 and 2018 dynamic-modeling papers, the closest existing
+two-fluid neutronics work in the open literature.
+
+Scope document at `docs/V0_4_0_MSBR_SCOPE.md` (commits c2521f4,
+22ab66c, b7af72d).
+
+---
