@@ -139,14 +139,25 @@ def build_model(quick: bool = False, mode: str = "homog") -> openmc.Model:
     # without code edits. Inactive batches scale with total batches.
     env_batches = os.environ.get("PROMETHEA_BATCHES")
     env_particles = os.environ.get("PROMETHEA_PARTICLES")
+    env_seed = os.environ.get("PROMETHEA_SEED")
     if env_batches:
         b = int(env_batches)
         settings.batches = b
         settings.inactive = max(10, b // 4)
     if env_particles:
         settings.particles = int(env_particles)
+    if env_seed:
+        # OpenMC seed must be a positive 64-bit int. We accept any
+        # positive integer from the workflow input; default OpenMC
+        # behavior (seed=1) is preserved when PROMETHEA_SEED is unset,
+        # so v0.2.0 runs remain bit-for-bit reproducible.
+        seed = int(env_seed)
+        if seed < 1:
+            raise ValueError(f"PROMETHEA_SEED must be >= 1, got {seed}")
+        settings.seed = seed
+    seed_str = f" seed={settings.seed}" if env_seed else ""
     print(f"[msre_{mode}] settings: batches={settings.batches} "
-          f"inactive={settings.inactive} particles={settings.particles}")
+          f"inactive={settings.inactive} particles={settings.particles}{seed_str}")
 
     # Initial source — a thin slab through the middle of the active core,
     # restricted to fissionable material to get a fast initial guess.

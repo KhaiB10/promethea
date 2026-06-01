@@ -67,6 +67,10 @@ on:
         options:
           - "true"
           - "false"
+      seed:
+        description: "OpenMC RNG seed (positive int). Empty = OpenMC default (seed=1), bit-for-bit reproducible with v0.2.0 runs. Set 1..N for multi-seed statistical envelope (v0.3.0 Workstream B)."
+        required: false
+        default: ""
   push:
     paths:
       - "benchmarks/msre/**"
@@ -79,7 +83,7 @@ on:
 # queue instead of preempt each other, while repeated pushes still
 # cancel stale default runs on the same ref.
 concurrency:
-  group: msre-${{ github.ref }}-${{ github.event_name }}-${{ github.event.inputs.mode || 'homog' }}-${{ github.event.inputs.boron_ppm || '0.3' }}-${{ github.event.inputs.fillet_radius_cm || '0.0' }}-${{ github.event.inputs.xs_library || 'endfb-viii.0' }}-${{ github.event.inputs.basket_shell || 'true' }}
+  group: msre-${{ github.ref }}-${{ github.event_name }}-${{ github.event.inputs.mode || 'homog' }}-${{ github.event.inputs.boron_ppm || '0.3' }}-${{ github.event.inputs.fillet_radius_cm || '0.0' }}-${{ github.event.inputs.xs_library || 'endfb-viii.0' }}-${{ github.event.inputs.basket_shell || 'true' }}-${{ github.event.inputs.seed || 'default' }}
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
@@ -178,8 +182,16 @@ jobs:
           XS_XML: ${{ steps.xs-paths.outputs.xs_xml }}
           XS_LIB: ${{ steps.xs-paths.outputs.xs_lib }}
           BASKET_SHELL: ${{ github.event.inputs.basket_shell || 'true' }}
+          SEED: ${{ github.event.inputs.seed || '' }}
         run: |
           mkdir -p out
+          # Pass PROMETHEA_SEED only if non-empty so OpenMC default
+          # (seed=1) is preserved when the input is left blank. This
+          # keeps v0.2.0 runs bit-for-bit reproducible.
+          SEED_ENV=()
+          if [ -n "$SEED" ]; then
+            SEED_ENV=(-e PROMETHEA_SEED="$SEED")
+          fi
           docker run --rm \
             -v $PWD:/workspace \
             -e OPENMC_CROSS_SECTIONS=/workspace/$XS_XML \
@@ -190,6 +202,7 @@ jobs:
             -e PROMETHEA_FILLET_RADIUS_CM=$FILLET_R \
             -e PROMETHEA_XS_LIBRARY=$XS_LIB \
             -e PROMETHEA_BASKET_SHELL=$BASKET_SHELL \
+            "${SEED_ENV[@]}" \
             -e HOME=/tmp \
             -w /workspace \
             promethea:ci \
@@ -210,6 +223,7 @@ jobs:
             echo "**Fillet radius (cm):** ${{ github.event.inputs.fillet_radius_cm || '0.0' }}"
             echo "**Cross-section library:** \`${{ github.event.inputs.xs_library || 'endfb-viii.0' }}\`"
             echo "**Basket INOR-8 shell:** \`${{ github.event.inputs.basket_shell || 'true' }}\`"
+            echo "**Seed:** \`${{ github.event.inputs.seed || '(default)' }}\`"
             echo ""
             echo "### k-eff"
             echo '```'
@@ -232,7 +246,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: msre-${{ github.event.inputs.mode || 'homog' }}-${{ github.event.inputs.xs_library || 'endfb-viii.0' }}-run-${{ github.run_number }}
+          name: msre-${{ github.event.inputs.mode || 'homog' }}-${{ github.event.inputs.xs_library || 'endfb-viii.0' }}-seed${{ github.event.inputs.seed || 'default' }}-run-${{ github.run_number }}
           path: |
             out/
             sims/openmc/msre_*/statepoint.*.h5

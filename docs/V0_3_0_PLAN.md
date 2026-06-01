@@ -223,7 +223,7 @@ When v0.3.0 work begins:
    - [ ] Append RESEARCH_LOG entry.
 
 3. **Workstream B (small code change)**
-   - [ ] Add `PROMETHEA_SEED` plumbing (run_criticality.py + workflow yml).
+   - [x] Add `PROMETHEA_SEED` plumbing (run_criticality.py + workflow yml). *(2026-06-01)*
    - [ ] Quick verification: 5k × 30 dispatch at seed=1 vs seed=2 →
          expect two different k-eff means.
    - [ ] If the verification passes, dispatch 5 seeds at the
