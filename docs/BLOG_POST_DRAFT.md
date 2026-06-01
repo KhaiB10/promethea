@@ -4,24 +4,38 @@
 
 I rebuilt the Molten Salt Reactor Experiment (MSRE, ORNL, 1965)
 criticality benchmark from primary sources in OpenMC, an open-source
-Monte Carlo neutron transport code. After three months of iteration in
-public on GitHub, the library-matched configuration (ENDF/B-VII.1)
-now matches the most recent published Serpent benchmark (Shen et al.
-2021, also ENDF/B-VII.1) to within **68 ± 37 pcm** — inside the
-2-sigma Monte Carlo statistical uncertainty. The ENDF/B-VIII.0
-production configuration matches the independent ANL/ORNL OpenMC
-implementation (Yilmaz et al. 2024) to within ~230 pcm. The model is
-fully open and runs as a one-click reproduction on free GitHub Actions
-infrastructure.
+Monte Carlo neutron transport code. After three months of iteration
+in public on GitHub, the v0.2.0 release (200k particles × 200 batches
+per run, May 2026) reports:
 
-The dominant defect was not boron content, not the cross-section
-library, and not corner geometry — all of which the literature flags as
-the usual suspects. It was a single spurious INOR-8 shell that an
-earlier version of the model placed around the graphite sample-basket
-position. Removing it recovered +1,045 pcm — about the worth of a real
-MSRE control rod — and closed the gap. Documentation, code, plots, and
-the full research log are all in the open at
+- **ENDF/B-VIII.0 canonical:** k = 1.02364 ± 0.00016
+- **ENDF/B-VII.1 library-matched:** k = 1.02202 ± 0.00019
+- **Gap vs Shen-Serpent 2021 (same library):** +70 ± 39 pcm (2σ)
+- **Gap vs Yilmaz CSG OpenMC 2024:** +242 pcm
+
+The library-matched configuration agrees with the most recent
+published Serpent benchmark (Shen et al. 2021) inside the 2-sigma
+Monte Carlo statistical band. The model is fully open and runs as a
+one-click reproduction on free GitHub Actions infrastructure.
+
+The dominant defect that got the project there was not boron content,
+not the cross-section library, and not corner geometry — all of which
+the literature flags as the usual suspects. It was a single spurious
+INOR-8 shell that an earlier version of the model placed around the
+graphite sample-basket position. Removing it recovered +1,045 pcm —
+about the worth of a real MSRE control rod — and closed the gap.
+Documentation, code, plots, and the full dated research log are all in
+the open at
 [github.com/KhaiB10/promethea](https://github.com/KhaiB10/promethea).
+
+Secondary finding, surfaced during the v0.2.0 audit: the project's
+primary-source citations had ~137 instances of "ORNL-TM-0728"
+(typo for ORNL-TM-730, Haubenreich/Engel/Prince/Claiborne 1964). The
+audit also surfaced a direct primary-source endorsement of the
+graphite-sample-assembly interpretation: TM-730 §4.2.1 states
+*"the effect of the graphite sample holder was neglected in these
+preliminary calculations."* Provenance was corrected throughout the
+repository in commit `e4fd5b1`.
 
 ## Why bother
 
@@ -160,14 +174,18 @@ What it means:
 - One person, one laptop, OpenMC, ~3 months of part-time effort, and
   free-tier CI is enough to land at the same k-effective as the
   state-of-the-art published Serpent benchmark of the same reactor,
-  to within ~220 pcm, with every dimension, every isotope, and every
-  commit publicly reproducible.
+  to within 70 pcm at the v0.2.0 statistics, with every dimension,
+  every isotope, and every commit publicly reproducible.
 - Promethea agrees with the ANL/ORNL OpenMC CSG implementation
-  (Yilmaz et al. 2024) to within ~230 pcm. That is a non-trivial
+  (Yilmaz et al. 2024) to within ~242 pcm. That is a non-trivial
   cross-check: two independently developed OpenMC models of the same
   reactor, built from the same primary sources, converging on the
   same answer. The basket-shell defect would have been very hard to
   catch without an automated sensitivity workflow.
+- The v0.1.0 → v0.2.0 jump (from 100k×100 to 200k×200 statistics)
+  reproduced the v0.1.0 means within 11 pcm and 2 pcm respectively,
+  with the per-run statistical uncertainty shrinking by a factor of 2
+  as expected (√4). The model is converged at the v0.2.0 sample size.
 
 What it does not mean:
 
@@ -179,32 +197,52 @@ What it does not mean:
 - This is a critical-configuration k-eff result. It is not a depletion
   result, not a fuel-cycle result, not a thermal-hydraulics result,
   not a kinetics result. Those are entire separate projects.
-- The 221 pcm overshoot of Shen is not yet fully explained — it is
-  within library spread, but I would like to characterize each
-  contributing term independently in Phase 1.2.
+- The 70 pcm overshoot of Shen at v0.2.0 statistics is inside the
+  2-sigma Monte Carlo band, but the residual structure of that gap
+  (library-by-library breakdown, sensitivity to each free parameter)
+  is the work of the v0.3.0 sensitivity matrix — not yet fully
+  characterized term-by-term.
 - The IRPhE handbook is paywalled; I do not yet have access to the
   evaluator's full geometry write-up to confirm that my dimensional
   re-derivation from TM-730 is identical to theirs. Some of the
-  221 pcm could be that.
+  v0.2.0 residual could be that.
 
 ## What's next
 
-1. **Submission package.** I am drafting an IRPhE Handbook submission
-   that documents this OpenMC implementation as an independent
-   re-evaluation of the MSRE benchmark. Draft is at
-   `docs/IRPHE_SUBMISSION_DRAFT.md` in the repo.
-2. **First-author paper.** Targeting *Annals of Nuclear Energy* or
-   *Nuclear Science and Engineering*. The angle is not "I beat
-   Shen" — it is "an open, reproducible OpenMC MSRE benchmark with
-   parameterized sensitivity studies on the four parameters that
-   matter most." Looking for a senior co-author at ORNL, Argonne,
-   Georgia Tech, UC Berkeley, or UTK.
-3. **Generalize.** The same OpenMC infrastructure, with a different
-   geometry and a different salt, becomes a re-implementation of the
-   Aircraft Reactor Experiment (ARE, 1954) — the only flying-reactor
-   experiment ever performed. That's a second paper, and it's where
-   the project starts to be genuinely useful to modern aerospace
-   propulsion work.
+**v0.3.0** (in progress, Q3 2026): two workstreams that close the
+two known limits the v0.2.0 release notes admit.
+*Workstream A* dispatches the canonical configuration at the
+rounded-corner fuel-fraction (TM-730 f=0.225, fillet_radius=0.475 cm)
+to quantify the ~7% systematic over-prediction relative to the
+as-built MSRE geometry.
+*Workstream B* runs a 5-seed statistical envelope at submission stats
+to separate per-run Monte Carlo noise from any seed-dependent bias.
+This closes the v0.2.0 "single-seed" caveat.
+
+**Submission package.** An IRPhE Handbook submission documenting
+this OpenMC implementation as an independent re-evaluation of the
+MSRE benchmark is at `docs/IRPHE_SUBMISSION_DRAFT.md` in the repo.
+The §4.2.1 section is now anchored to the TM-730 primary-source
+quote on the graphite sample assembly.
+
+**First-author paper.** Targeting *Annals of Nuclear Energy* or
+*Nuclear Science and Engineering*. The angle is not "I beat Shen" —
+it is "an open, reproducible OpenMC MSRE benchmark with parameterized
+sensitivity studies on the four parameters that matter most, and a
+full CI-validated provenance chain back to the 1964 primary source."
+Co-author outreach in progress with senior researchers at the
+relevant national-lab and industry MSR groups.
+
+**v0.4.0** (Q3/Q4 2026, scoping): the next-order question is whether
+an open OpenMC pipeline can extend from "verifies a 1965 experiment"
+to "verifies a 1968 design that was never built." v0.4.0 will be
+the first public, CI-validated, two-fluid Molten-Salt Breeder Reactor
+(MSBR) neutronics model, validated against Robertson/Briggs/Smith/
+Bettis 1968 (ORNL-4528). The two-fluid variant has not been openly
+recomputed in modern Monte Carlo since the original ORNL work; this
+is the contribution. Scope is BOL k-eff + breeding ratio only — no
+reprocessing, no depletion, no thermal-hydraulics. Those come in
+v0.5.0+ as separately scoped milestones.
 
 ## What I learned
 
@@ -223,6 +261,15 @@ particular geometry mistake.
 The lesson is: when your prior keeps producing the wrong answer,
 the prior is wrong, not the experiment. Read the source again.
 
+The v0.2.0 cycle reinforced this. The TM-730 audit — forced by
+reaching milestone-2 numerical targets and needing to defend the
+geometry choices in a paper draft — turned up ~137 instances of a
+stale report-number typo and a primary-source quote that the
+§4.2.1 section of the IRPhE draft now anchors to. The numbers
+were already right. The provenance got there second. That order is
+backwards, and that's the lesson going into v0.4.0: get provenance
+right before you trust the number.
+
 ## Reproducing this
 
 ```
@@ -238,15 +285,19 @@ docker run --rm -v $PWD:/work -w /work \
   -e PROMETHEA_BASKET_SHELL=false \
   -e OPENMC_CROSS_SECTIONS=/work/data/xs/endfb-viii.0-hdf5/cross_sections.xml \
   promethea python benchmarks/msre/run_criticality.py \
-    --mode het_critical --particles 100000 --batches 100
+    --mode het_critical --particles 200000 --batches 200
 ```
 
 Or run it on GitHub Actions: the workflow `benchmark-msre.yml` accepts
-every parameter as an input, runs on the free ubuntu-latest runner,
-and produces a step summary with k-eff and a tail of the OpenMC log.
+every parameter as an input (mode, particles, batches, boron_ppm,
+fillet_radius_cm, xs_library, basket_shell, seed), runs on the free
+ubuntu-latest runner, and produces a step summary with k-eff and a
+tail of the OpenMC log.
 
-The v0.1.0 release is at
-[github.com/KhaiB10/promethea/releases/tag/v0.1.0](https://github.com/KhaiB10/promethea/releases/tag/v0.1.0).
+The v0.2.0 release is at
+[github.com/KhaiB10/promethea/releases/tag/v0.2.0](https://github.com/KhaiB10/promethea/releases/tag/v0.2.0)
+and carries the 200k×200 submission-of-record run logs in
+`benchmarks/msre/runs/v0.2.0_submission/`.
 
 If you find an error in the model — and there are still errors in the
 model — please open an issue. The whole point is that we get to a
