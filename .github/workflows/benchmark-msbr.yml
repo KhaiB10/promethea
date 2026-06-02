@@ -25,7 +25,7 @@ on:
           - vf_sweep
           - spectrum
       vf_grid:
-        description: "vf_sweep grid: coarse (3x3, default), fine (5x5), or single (smoke test)"
+        description: "vf_sweep grid: coarse (3x3), fine (5x5), single (ORNL smoke), or corner (Δk-max reproduction)"
         required: false
         default: "coarse"
         type: choice
@@ -33,6 +33,7 @@ on:
           - coarse
           - fine
           - single
+          - corner
       temp_lo_K:
         description: "Low temperature in K for temp_sweep (default 900)"
         required: false

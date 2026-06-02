@@ -135,12 +135,22 @@ def _single_grid() -> list[tuple[float, float]]:
     return [(ORNL_FUEL, ORNL_BLANKET)]
 
 
+def _corner_grid() -> list[tuple[float, float]]:
+    """Just the high-fuel/high-blanket corner from the coarse 3×3 grid.
+
+    Used to reproduce the v0.4.0 Δk-max grid point with an independent
+    seed for confirmation."""
+    return [(0.1832, 0.1152)]
+
+
 def get_grid() -> list[tuple[float, float]]:
     mode = os.environ.get("PROMETHEA_VF_GRID", "coarse").strip().lower()
     if mode == "fine":
         return _fine_grid()
     if mode == "single":
         return _single_grid()
+    if mode == "corner":
+        return _corner_grid()
     return _coarse_grid()
 
 

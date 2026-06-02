@@ -33,12 +33,12 @@ annulus split at the original ORNL ratio:
 
     A_inner_bore / A_total_fuel = R_INNER_TUBE_ID^2
                                   / (R_INNER_TUBE_ID^2 + R_OUTER_BORE^2 - R_INNER_TUBE_OD^2)
-                                ≈ 0.241   (from the ORNL dimensions)
+                                ≈ 0.4015   (from the ORNL dimensions)
 
 and the graphite inner-tube thickness is preserved as a fixed fraction
 of total graphite:
 
-    A_inner_graphite_tube / A_total_graphite ≈ 0.014   (from ORNL)
+    A_inner_graphite_tube / A_total_graphite ≈ 0.1350   (from ORNL)
 
 These two ratios are baked in as constants below; the user only sweeps
 the three macroscopic volume fractions.
