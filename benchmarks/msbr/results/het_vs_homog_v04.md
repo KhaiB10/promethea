@@ -13,20 +13,24 @@ measurement of the MSBR fuel-cell het/homog Δk magnitude.
   graphite 0.8138 / blanket 0.0640
 - Library: ENDF/B-VIII.0
 - Temperature: 900 K (S(α,β) interpolation between 800/1000 K)
-- Statistics: 50 000 particles × 120 batches (100 active), 2 seeds
+- Statistics: 50 000 particles × 120 batches (100 active) for seeds 1–2;
+  200 000 particles × 200 batches (167 active) for seed=3 precision lock
 
 **Results**
 
-| seed | library | k_het | k_homog | Δk (pcm) | z |
-|------|---------|---------------------|---------------------|-----------|------|
-| 1    | VIII.0  | 1.13132 ± 0.00039   | 1.02602 ± 0.00041   | +10 530 ± 56 | 186  |
-| 2    | VIII.0  | 1.13212 ± 0.00041   | 1.02608 ± 0.00038   | +10 604 ± 56 | 190  |
-| 1    | VII.1   | 1.13208 ± 0.00040   | 1.02707 ± 0.00041   | +10 501 ± 58 | 182  |
+| seed | library | particles × batches | k_het | k_homog | Δk (pcm) | z |
+|------|---------|---------------------|---------------------|---------------------|-----------|------|
+| 1    | VIII.0  | 50k × 120  | 1.13132 ± 0.00039   | 1.02602 ± 0.00041   | +10 530 ± 56 | 186  |
+| 2    | VIII.0  | 50k × 120  | 1.13212 ± 0.00041   | 1.02608 ± 0.00038   | +10 604 ± 56 | 190  |
+| 3    | VIII.0  | 200k × 200 | 1.13175 ± 0.00015   | 1.02684 ± 0.00013   | +10 491 ± 20 | 525  |
+| 1    | VII.1   | 50k × 120  | 1.13208 ± 0.00040   | 1.02707 ± 0.00041   | +10 501 ± 58 | 182  |
 
-**Pooled VIII.0 estimate:** Δk = **+10 567 ± 40 pcm**.
+**Pooled VIII.0 estimate (3 seeds, inverse-variance weighted):**
+Δk = **+10 506 ± 18 pcm** (χ² = 3.81 / 2 dof, internal consistency OK).
 
-**Library spread on Δk:** VII.1 − pooled VIII.0 = **−66 ± 70 pcm**
-(statistically consistent with zero).
+**Library spread on Δk:** VII.1 − pooled VIII.0 = **−5 ± 61 pcm**
+(z = −0.09, fully consistent with zero — the heterogeneity Δk is
+library-invariant at our 60 pcm precision).
 
 **Second finding — library robustness of the heterogeneity Δk:** while
 individual k_inf values shift between libraries (~600 pcm here, vs the
@@ -93,6 +97,7 @@ gh workflow run benchmark-msbr.yml --repo KhaiB10/promethea --ref main \
 ```
 
 CI runs (this measurement):
-- seed=1, VIII.0: GitHub Actions run 26796542385 (HEAD 654cf8f)
-- seed=2, VIII.0: GitHub Actions run 26797667813 (HEAD 654cf8f)
-- seed=1, VII.1:  GitHub Actions run 26806106692 (HEAD af7ebaa)
+- seed=1, VIII.0, 50k×120:  run 26796542385 (HEAD 654cf8f)
+- seed=2, VIII.0, 50k×120:  run 26797667813 (HEAD 654cf8f)
+- seed=1, VII.1,  50k×120:  run 26806106692 (HEAD af7ebaa)
+- seed=3, VIII.0, 200k×200: run 26806111491 (HEAD af7ebaa)
