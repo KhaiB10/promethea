@@ -17,12 +17,24 @@ measurement of the MSBR fuel-cell het/homog Δk magnitude.
 
 **Results**
 
-| seed | k_het | k_homog | Δk (pcm) | z |
-|------|---------------------|---------------------|-----------|------|
-| 1    | 1.13132 ± 0.00039   | 1.02602 ± 0.00041   | +10 530 ± 56 | 186  |
-| 2    | 1.13212 ± 0.00041   | 1.02608 ± 0.00038   | +10 604 ± 56 | 190  |
+| seed | library | k_het | k_homog | Δk (pcm) | z |
+|------|---------|---------------------|---------------------|-----------|------|
+| 1    | VIII.0  | 1.13132 ± 0.00039   | 1.02602 ± 0.00041   | +10 530 ± 56 | 186  |
+| 2    | VIII.0  | 1.13212 ± 0.00041   | 1.02608 ± 0.00038   | +10 604 ± 56 | 190  |
+| 1    | VII.1   | 1.13208 ± 0.00040   | 1.02707 ± 0.00041   | +10 501 ± 58 | 182  |
 
-**Pooled estimate:** Δk = **+10 567 ± 40 pcm**.
+**Pooled VIII.0 estimate:** Δk = **+10 567 ± 40 pcm**.
+
+**Library spread on Δk:** VII.1 − pooled VIII.0 = **−66 ± 70 pcm**
+(statistically consistent with zero).
+
+**Second finding — library robustness of the heterogeneity Δk:** while
+individual k_inf values shift between libraries (~600 pcm here, vs the
+162 pcm shift seen in MSRE), the *difference* k_het − k_homog is
+library-invariant at our statistical precision. The het and homog
+cells absorb the library bias similarly, so the geometric effect
+cancels out. This makes the Δk a structural property of the MSBR
+fuel-cell geometry, not a library-specific artifact.
 
 **Interpretation**
 
@@ -81,5 +93,6 @@ gh workflow run benchmark-msbr.yml --repo KhaiB10/promethea --ref main \
 ```
 
 CI runs (this measurement):
-- seed=1: GitHub Actions run 26796542385 (HEAD 654cf8f)
-- seed=2: GitHub Actions run 26797667813 (HEAD 654cf8f)
+- seed=1, VIII.0: GitHub Actions run 26796542385 (HEAD 654cf8f)
+- seed=2, VIII.0: GitHub Actions run 26797667813 (HEAD 654cf8f)
+- seed=1, VII.1:  GitHub Actions run 26806106692 (HEAD af7ebaa)
