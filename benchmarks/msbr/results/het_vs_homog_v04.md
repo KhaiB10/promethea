@@ -38,13 +38,36 @@ measurement of the MSBR fuel-cell het/homog Δk magnitude.
 - Reproducibility: two independent seeds agree within 74 pcm
   (well under 2σ of the difference).
 
-**Honest scope**
+**Honest scope and prior art**
 
 - This is a unit-cell k_∞ result, not a core-level reactivity penalty.
   Reactor-scale Δk requires the full lattice + reflector geometry.
 - Cross-code verification (Serpent or MCNP) not yet performed.
 - Pending v0.4.0: cross-library spread (VII.1, JEFF-3.3, JENDL),
   spectrum decomposition, BR comparison.
+
+**Prior art that exists** (disclosed for honesty):
+
+- Rykhlevskii, Lindsay, Huff (2017), "Online Reprocessing Simulation for
+  Thorium-Fueled Molten Salt Breeder Reactor," Trans. ANS 117:239-242:
+  Serpent 2 / ENDF-B/VII.0 unit-cell of MSBR Zone I (13.2 vol% fuel,
+  908 K, periodic BCs). Reports k_inf and depletion behavior. Does NOT
+  perform a het vs homog Δk comparison.
+- Rykhlevskii, Lindsay, Huff (2017), "Full-Core Analysis of
+  Thorium-Fueled MSBR Using SERPENT 2," Trans. ANS 117:1343-1346:
+  Serpent 2 full-core, k_eff = 1.00389 ± 0.00005.
+- Betzler et al. (OSTI 1559664): SCALE/TRITON full-core vs unit-cell
+  comparison for fast-spectrum MSRs, NOT MSBR thermal.
+
+**What this work adds over the above:**
+
+1. First open-source OpenMC measurement of MSBR fuel-cell k_inf with
+   independent verification across two seeds.
+2. First openly reproducible Δk_het/homog measurement for the MSBR
+   fuel cell. Prior unit-cell papers (Rykhlevskii) modeled only the
+   heterogeneous configuration.
+3. Reproducible from a public CI workflow with pinned cross-section
+   library and seed; raw artifacts attached to each run.
 
 **Reproduce**
 
