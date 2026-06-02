@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "MSBR mode: plot, unit_cell (het), homog_cell, or het_vs_homog (both + Delta_k)"
+        description: "MSBR mode: plot, unit_cell, homog_cell, het_vs_homog, or temp_sweep"
         required: false
         default: "plot"
         type: choice
@@ -21,6 +21,15 @@ on:
           - unit_cell
           - homog_cell
           - het_vs_homog
+          - temp_sweep
+      temp_lo_K:
+        description: "Low temperature in K for temp_sweep (default 900)"
+        required: false
+        default: "900"
+      temp_hi_K:
+        description: "High temperature in K for temp_sweep (default 1200)"
+        required: false
+        default: "1200"
       particles:
         description: "Particles per batch (default 20000)"
         required: false
@@ -203,6 +212,34 @@ jobs:
             promethea:ci \
             python -m benchmarks.msbr.run_homog_cell 2>&1 | tee out/msbr_homog_run.log
 
+      # ---- 3e. Temperature sweep -----------------------------------------
+      - name: Run MSBR temperature sweep
+        if: ${{ steps.mode.outputs.effective == 'temp_sweep' }}
+        env:
+          PARTICLES: ${{ github.event.inputs.particles || '20000' }}
+          BATCHES: ${{ github.event.inputs.batches || '60' }}
+          XS_XML: ${{ steps.xs-paths.outputs.xs_xml }}
+          SEED: ${{ github.event.inputs.seed || '' }}
+          TEMP_LO: ${{ github.event.inputs.temp_lo_K || '900' }}
+          TEMP_HI: ${{ github.event.inputs.temp_hi_K || '1200' }}
+        run: |
+          SEED_ENV=()
+          if [ -n "$SEED" ]; then
+            SEED_ENV=(-e PROMETHEA_SEED="$SEED")
+          fi
+          docker run --rm \
+            -v $PWD:/workspace \
+            -e OPENMC_CROSS_SECTIONS=/workspace/$XS_XML \
+            -e PROMETHEA_PARTICLES=$PARTICLES \
+            -e PROMETHEA_BATCHES=$BATCHES \
+            -e PROMETHEA_TEMP_LO_K=$TEMP_LO \
+            -e PROMETHEA_TEMP_HI_K=$TEMP_HI \
+            "${SEED_ENV[@]}" \
+            -e HOME=/tmp \
+            -w /workspace \
+            promethea:ci \
+            python -m benchmarks.msbr.run_temp_sweep 2>&1 | tee out/msbr_temp_sweep.log
+
       # ---- 3d. Het vs homog comparison ------------------------------------
       - name: Compare het vs homog
         if: ${{ steps.mode.outputs.effective == 'het_vs_homog' }}
@@ -248,6 +285,12 @@ jobs:
               echo '```'
               cat out/het_vs_homog.log 2>/dev/null \
                 || echo "(no comparison output — see artifact)"
+              echo '```'
+            elif [ "$MODE" = "temp_sweep" ]; then
+              echo "### Temperature coefficient (two-point FD)"
+              echo '```'
+              tail -25 out/msbr_temp_sweep.log 2>/dev/null \
+                || echo "(no temp-sweep output — see artifact)"
               echo '```'
             else
               echo "### Geometry plots"

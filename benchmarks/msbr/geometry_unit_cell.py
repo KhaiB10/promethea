@@ -103,16 +103,24 @@ import math as _math
 R_GRAPHITE_OD_CM = (EQUAL_AREA_R_CM ** 2 * (1.0 - 0.064)) ** 0.5  # ~6.932
 
 
-def build_unit_cell_geometry() -> tuple[openmc.Geometry, openmc.Materials]:
+def build_unit_cell_geometry(temp_K: float | None = None) -> tuple[openmc.Geometry, openmc.Materials]:
     """Concentric cylindrical unit cell with reflective BCs.
 
-    Returns the OpenMC geometry and the materials collection for the
-    cell. Volume fractions are intentionally NOT tuned to match
-    Table 6.2 (0.802/0.134/0.064) — this prototype tests the material
-    library and tally pipeline, not the reactor configuration.
+    Parameters
+    ----------
+    temp_K:
+        Optional material temperature (K). Defaults to the package's
+        MSBR reference temperature (900 K). Used by the temperature-
+        coefficient sweep to compute alpha = (1/k)(dk/dT).
+
+    Volume fractions are intentionally NOT tuned to match Table 6.2
+    (0.802/0.134/0.064) — this prototype tests the material library
+    and tally pipeline, not the reactor configuration.
     """
-    fuel_salt = mats.build_fuel_salt()
-    graphite = mats.build_graphite()
+    if temp_K is None:
+        temp_K = mats.MSBR_TEMP_K
+    fuel_salt = mats.build_fuel_salt(temp_K=temp_K)
+    graphite = mats.build_graphite(temp_K=temp_K)
 
     # Cylindrical surfaces
     s_inner_id = openmc.ZCylinder(r=R_INNER_TUBE_ID_CM)
@@ -121,7 +129,7 @@ def build_unit_cell_geometry() -> tuple[openmc.Geometry, openmc.Materials]:
     s_graphite_od = openmc.ZCylinder(r=R_GRAPHITE_OD_CM)
     s_outer_pitch = openmc.ZCylinder(r=EQUAL_AREA_R_CM, boundary_type="reflective")
 
-    blanket_salt = mats.build_blanket_salt()
+    blanket_salt = mats.build_blanket_salt(temp_K=temp_K)
 
     # Axial cap surfaces (1 cm slab with reflective top/bottom)
     z_lo = openmc.ZPlane(z0=-0.5, boundary_type="reflective")
