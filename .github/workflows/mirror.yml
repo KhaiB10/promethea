@@ -1,0 +1,92 @@
+name: mirror
+
+# Mirrors main to GitLab and Codeberg on every push to main, plus manual
+# dispatch and a nightly cron as a safety net.
+#
+# Setup (one-time, owner action):
+#   1. Create empty repo at:
+#        https://gitlab.com/KhaiB10/promethea     (push-only mirror)
+#        https://codeberg.org/KhaiB10/promethea   (push-only mirror)
+#   2. Generate write-scoped personal access tokens:
+#        - GitLab:   https://gitlab.com/-/user_settings/personal_access_tokens
+#                    scope: write_repository
+#        - Codeberg: https://codeberg.org/user/settings/applications
+#                    scope: write:repository
+#   3. Add to repo secrets at
+#      https://github.com/KhaiB10/promethea/settings/secrets/actions:
+#        GITLAB_MIRROR_TOKEN
+#        CODEBERG_MIRROR_TOKEN
+#
+# Until both secrets are configured the corresponding step will skip
+# (the workflow does not fail). Once configured, every push to main and
+# every nightly cron run will keep the mirrors in sync.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Nightly at 09:00 UTC (04:00 America/Chicago, after most US activity)
+    - cron: "0 9 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout full history + tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Push to GitLab
+        if: ${{ env.GITLAB_TOKEN != '' }}
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+          # oauth2:<token> is GitLab's documented push-token form.
+          git remote add gitlab \
+            "https://oauth2:${GITLAB_TOKEN}@gitlab.com/KhaiB10/promethea.git"
+          # --mirror would also delete branches; we use --prune --tags to
+          # keep main + all tags synced without nuking GitLab-side branches
+          # if any are added manually.
+          git push --prune --tags --force gitlab \
+            "refs/heads/main:refs/heads/main"
+
+      - name: Push to Codeberg
+        if: ${{ env.CODEBERG_TOKEN != '' }}
+        env:
+          CODEBERG_TOKEN: ${{ secrets.CODEBERG_MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+          git remote add codeberg \
+            "https://KhaiB10:${CODEBERG_TOKEN}@codeberg.org/KhaiB10/promethea.git"
+          git push --prune --tags --force codeberg \
+            "refs/heads/main:refs/heads/main"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Mirror status"
+            echo ""
+            if [ -n "${{ secrets.GITLAB_MIRROR_TOKEN }}" ]; then
+              echo "- GitLab: pushed to \`gitlab.com/KhaiB10/promethea\`"
+            else
+              echo "- GitLab: SKIPPED (set \`GITLAB_MIRROR_TOKEN\` secret to enable)"
+            fi
+            if [ -n "${{ secrets.CODEBERG_MIRROR_TOKEN }}" ]; then
+              echo "- Codeberg: pushed to \`codeberg.org/KhaiB10/promethea\`"
+            else
+              echo "- Codeberg: SKIPPED (set \`CODEBERG_MIRROR_TOKEN\` secret to enable)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
