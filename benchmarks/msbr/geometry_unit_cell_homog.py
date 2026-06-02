@@ -41,11 +41,18 @@ also bakes in a renormalization of the fuel fraction.
 Mixing rule
 -----------
 
-OpenMC supports density-weighted material mixing via
-``openmc.Material.mix_materials`` with ``percent_type="vo"``. The
-result is a single Material whose nuclide densities are the
-volume-fraction-weighted sum of the inputs at their native
-densities (Tables 3.1, 3.5 of ORNL-4528).
+OpenMC's ``Material.mix_materials`` rejects inputs that have S(α,β)
+thermal scattering tables attached, because the table is per-material
+and cannot be volume-averaged. We work around this by:
+
+  1. building a graphite variant *without* ``c_Graphite`` for mixing
+  2. volume-mixing fuel + bare-graphite + blanket
+  3. attaching ``c_Graphite`` to the resulting mixed material
+
+The attached S(α,β) only applies to carbon nuclides in the mixture,
+which is correct: graphite is the only carbon source. Density-weighted
+mixing is otherwise identical to the heterogeneous build, so the
+comparison isolates spatial self-shielding from any other effect.
 """
 from __future__ import annotations
 
@@ -85,15 +92,26 @@ def _volume_fractions() -> dict[str, float]:
 VF = _volume_fractions()
 
 
+def _build_graphite_bare(temp_K: float = mats.MSBR_TEMP_K) -> openmc.Material:
+    """Graphite without S(α,β) — used only as input to mix_materials."""
+    g = openmc.Material(name="MSBR_graphite_bare")
+    g.temperature = temp_K
+    g.set_density("g/cm3", mats.GRAPHITE_DENSITY_G_CC)
+    g.add_element("C", 1.0)
+    return g
+
+
 def build_homogenized_material() -> openmc.Material:
     """Volume-mix fuel salt + graphite + blanket salt into one Material.
 
-    Uses OpenMC's built-in volume-percent mix. The result is named
-    ``MSBR_homogenized`` for tally bookkeeping symmetry with the
-    heterogeneous build.
+    We strip the graphite S(α,β) table for the mix step (OpenMC does not
+    support mixing materials with attached thermal scattering tables),
+    then re-attach ``c_Graphite`` to the resulting mixture so carbon
+    nuclides in the homogenized material still see the thermal scattering
+    law. Net physics is unchanged versus the heterogeneous build.
     """
     fuel = mats.build_fuel_salt()
-    graphite = mats.build_graphite()
+    graphite = _build_graphite_bare()
     blanket = mats.build_blanket_salt()
 
     mixed = openmc.Material.mix_materials(
@@ -102,6 +120,7 @@ def build_homogenized_material() -> openmc.Material:
         percent_type="vo",
         name="MSBR_homogenized",
     )
+    mixed.add_s_alpha_beta("c_Graphite")
     return mixed
 
 
