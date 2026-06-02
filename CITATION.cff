@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+title: "Promethea: An open, CI-validated OpenMC benchmark of the Molten Salt Reactor Experiment"
+message: "If you use Promethea in academic work, please cite it as below."
+type: software
+authors:
+  - family-names: "Bui"
+    given-names: "Khai"
+    alias: "KhaiB10"
+repository-code: "https://github.com/KhaiB10/promethea"
+url: "https://github.com/KhaiB10/promethea"
+abstract: >-
+  Promethea is an open, primary-source-anchored OpenMC reproduction of
+  the Molten Salt Reactor Experiment (MSRE, ORNL, 1965) criticality
+  benchmark, with deterministic CI, full citation audit against
+  ORNL-TM-0728/730, and machine-verifiable k-effective at multiple
+  cross-section libraries. v0.4.0 extends the toolchain to the
+  two-fluid Molten Salt Breeder Reactor (MSBR, ORNL-4528, 1971).
+keywords:
+  - "molten salt reactor"
+  - "MSRE"
+  - "MSBR"
+  - "OpenMC"
+  - "Monte Carlo"
+  - "neutronics"
+  - "reactor physics"
+  - "criticality benchmark"
+  - "reproducibility"
+license: MIT
+version: "0.2.0"
+date-released: "2026-05-30"
+preferred-citation:
+  type: software
+  title: "Promethea v0.2.0: An open, CI-validated OpenMC benchmark of the MSRE"
+  authors:
+    - family-names: "Bui"
+      given-names: "Khai"
+  year: 2026
+  month: 5
+  url: "https://github.com/KhaiB10/promethea/releases/tag/v0.2.0"
+  version: "0.2.0"

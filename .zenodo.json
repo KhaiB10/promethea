@@ -1,0 +1,39 @@
+{
+  "title": "Promethea: An open, CI-validated OpenMC benchmark of the Molten Salt Reactor Experiment",
+  "upload_type": "software",
+  "description": "Promethea is an open, primary-source-anchored OpenMC reproduction of the Molten Salt Reactor Experiment (MSRE, ORNL, 1965) criticality benchmark, with deterministic CI, full citation audit against ORNL-TM-0728/730, and machine-verifiable k-effective at multiple cross-section libraries. v0.4.0 extends the toolchain to the two-fluid Molten Salt Breeder Reactor (MSBR, ORNL-4528, 1971).",
+  "creators": [
+    {
+      "name": "Bui, Khai",
+      "affiliation": "Independent"
+    }
+  ],
+  "access_right": "open",
+  "license": "MIT",
+  "keywords": [
+    "molten salt reactor",
+    "MSRE",
+    "MSBR",
+    "OpenMC",
+    "Monte Carlo",
+    "neutronics",
+    "reactor physics",
+    "criticality benchmark",
+    "reproducibility",
+    "open science"
+  ],
+  "communities": [],
+  "related_identifiers": [
+    {
+      "relation": "isSupplementTo",
+      "identifier": "https://github.com/KhaiB10/promethea",
+      "resource_type": "software"
+    },
+    {
+      "relation": "references",
+      "identifier": "10.2172/4093364",
+      "resource_type": "publication-report",
+      "scheme": "doi"
+    }
+  ]
+}

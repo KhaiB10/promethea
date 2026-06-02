@@ -1,0 +1,185 @@
+name: benchmark-msbr
+
+# v0.4.0 first-light: run the MSBR unit-cell k_inf in CI, plus a cheap
+# 'plot' mode that emits PNGs of the unit cell and full-core geometry
+# without running OpenMC transport.
+#
+# Mirrors benchmark-msre's structure (XS cache + Docker buildx + result
+# extraction in the workflow summary) so multi-seed envelopes work the
+# same way.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "MSBR mode: 'plot' for geometry PNGs only, 'unit_cell' for k_inf"
+        required: false
+        default: "plot"
+        type: choice
+        options:
+          - plot
+          - unit_cell
+      particles:
+        description: "Particles per batch (default 20000)"
+        required: false
+        default: "20000"
+      batches:
+        description: "Total batches (default 60)"
+        required: false
+        default: "60"
+      xs_library:
+        description: "Cross-section library"
+        required: false
+        default: "endfb-viii.0"
+        type: choice
+        options:
+          - endfb-viii.0
+          - endfb-vii.1
+          - jeff-3.3
+      seed:
+        description: "OpenMC RNG seed (positive int). Empty = OpenMC default (seed=1)."
+        required: false
+        default: ""
+  # Path-filtered auto-trigger so MSBR code changes are exercised on push
+  # without firing on every commit.
+  push:
+    branches: [main]
+    paths:
+      - "benchmarks/msbr/**"
+      - ".github/workflows/benchmark-msbr.yml"
+      - "Dockerfile"
+      - "environment.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: msbr-${{ github.ref }}-${{ github.event_name }}-${{ github.event.inputs.mode || 'plot' }}-${{ github.event.inputs.xs_library || 'endfb-viii.0' }}-${{ github.event.inputs.seed || 'default' }}
+  cancel-in-progress: true
+
+jobs:
+  msbr-v04:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- 1. Resolve and restore the XS library --------------------------
+      - name: Resolve library paths
+        id: xs-paths
+        env:
+          XS_LIB: ${{ github.event.inputs.xs_library || 'endfb-viii.0' }}
+        run: |
+          XS_LIB="${XS_LIB:-endfb-viii.0}"
+          case "$XS_LIB" in
+            endfb-viii.0) DIRNAME="endfb-viii.0-hdf5" ;;
+            endfb-vii.1)  DIRNAME="endfb-vii.1-hdf5" ;;
+            jeff-3.3)     DIRNAME="jeff-3.3-hdf5" ;;
+            *) echo "Unknown xs_library: $XS_LIB"; exit 1 ;;
+          esac
+          echo "xs_lib=$XS_LIB" >> "$GITHUB_OUTPUT"
+          echo "xs_dirname=$DIRNAME" >> "$GITHUB_OUTPUT"
+          echo "xs_xml=data/xs/$DIRNAME/cross_sections.xml" >> "$GITHUB_OUTPUT"
+
+      - name: Cache cross-section library
+        if: ${{ github.event.inputs.mode != 'plot' }}
+        id: xs-cache
+        uses: actions/cache@v4
+        with:
+          path: data/xs/${{ steps.xs-paths.outputs.xs_dirname }}
+          key: ${{ steps.xs-paths.outputs.xs_dirname }}-v1
+
+      - name: Fetch cross-sections (if cache miss and mode != plot)
+        if: ${{ github.event.inputs.mode != 'plot' && steps.xs-cache.outputs.cache-hit != 'true' }}
+        run: bash scripts/fetch_xs.sh ${{ steps.xs-paths.outputs.xs_lib }}
+
+      - name: Prepare working directories
+        run: |
+          sudo chmod -R a+rX data/xs 2>/dev/null || true
+          mkdir -p sims/openmc out out/plots/msbr
+          sudo chmod -R a+rwX sims out
+
+      # ---- 2. Build Docker image ------------------------------------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Promethea image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: promethea:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ---- 3a. Plot mode --------------------------------------------------
+      - name: Generate MSBR geometry plots
+        if: ${{ github.event.inputs.mode == 'plot' || github.event_name == 'push' }}
+        run: |
+          docker run --rm \
+            -v $PWD:/workspace \
+            -e HOME=/tmp \
+            -w /workspace \
+            promethea:ci \
+            python -m benchmarks.msbr.plot_geometry 2>&1 | tee out/msbr_plot.log
+          ls -lh out/plots/msbr/ || true
+
+      # ---- 3b. Unit-cell k_inf --------------------------------------------
+      - name: Run MSBR unit-cell k_inf
+        if: ${{ github.event.inputs.mode == 'unit_cell' && github.event_name != 'push' }}
+        env:
+          PARTICLES: ${{ github.event.inputs.particles || '20000' }}
+          BATCHES: ${{ github.event.inputs.batches || '60' }}
+          XS_XML: ${{ steps.xs-paths.outputs.xs_xml }}
+          SEED: ${{ github.event.inputs.seed || '' }}
+        run: |
+          SEED_ENV=()
+          if [ -n "$SEED" ]; then
+            SEED_ENV=(-e PROMETHEA_SEED="$SEED")
+          fi
+          docker run --rm \
+            -v $PWD:/workspace \
+            -e OPENMC_CROSS_SECTIONS=/workspace/$XS_XML \
+            -e PROMETHEA_PARTICLES=$PARTICLES \
+            -e PROMETHEA_BATCHES=$BATCHES \
+            "${SEED_ENV[@]}" \
+            -e HOME=/tmp \
+            -w /workspace \
+            promethea:ci \
+            python -m benchmarks.msbr.run_unit_cell 2>&1 | tee out/msbr_run.log
+
+      # ---- 4. Surface results ---------------------------------------------
+      - name: Write summary
+        if: always()
+        run: |
+          {
+            echo "## MSBR v0.4.0 first-light"
+            echo ""
+            echo "**Commit:** \`${GITHUB_SHA:0:7}\`"
+            echo "**Mode:** ${{ github.event.inputs.mode || 'plot' }}"
+            echo "**Cross-section library:** \`${{ github.event.inputs.xs_library || 'endfb-viii.0' }}\`"
+            echo "**Seed:** \`${{ github.event.inputs.seed || '(default)' }}\`"
+            echo ""
+            if [ "${{ github.event.inputs.mode }}" = "unit_cell" ]; then
+              echo "### k_inf"
+              echo '```'
+              grep -E "(k-eff|k-effective|combined)" out/msbr_run.log | tail -20 \
+                || echo "(no k-eff lines — see artifact)"
+              echo '```'
+            else
+              echo "### Geometry plots"
+              ls out/plots/msbr/ 2>/dev/null | sed 's/^/- /' || echo "(no plots)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msbr-${{ github.event.inputs.mode || 'plot' }}-${{ github.event.inputs.xs_library || 'endfb-viii.0' }}-seed${{ github.event.inputs.seed || 'default' }}-run-${{ github.run_number }}
+          path: |
+            out/
+            sims/openmc/msbr_*/
+          if-no-files-found: warn
+          retention-days: 30

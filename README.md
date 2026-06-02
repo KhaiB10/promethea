@@ -82,6 +82,36 @@ You don't need a Linux box to reproduce Promethea results.
 
 Code: [MIT](LICENSE). Documents, designs, and figures: [CC BY 4.0](LICENSE-DOCS).
 
+## Cite this work
+
+If Promethea is useful in academic or technical writing, please cite the
+version you used. A machine-readable [`CITATION.cff`](CITATION.cff) is
+included; GitHub renders it as a "Cite this repository" button at the
+top right of the repo page.
+
+**BibTeX (v0.2.0):**
+
+```bibtex
+@software{bui_promethea_2026,
+  author       = {Bui, Khai},
+  title        = {{Promethea v0.2.0: An open, CI-validated OpenMC
+                   benchmark of the Molten Salt Reactor Experiment}},
+  year         = {2026},
+  month        = {5},
+  version      = {0.2.0},
+  url          = {https://github.com/KhaiB10/promethea/releases/tag/v0.2.0},
+  license      = {MIT}
+}
+```
+
+For citations of specific results (k-effective values, sensitivity
+studies, primary-source audits) please also reference the underlying
+ORNL technical memoranda ([TM-0728](https://www.osti.gov/biblio/4093364)
+and [ORNL-4528](https://www.osti.gov/biblio/4093364)) directly. A Zenodo
+DOI will be minted on the next tagged release.
+
+Repository mirrors (read-only): [GitLab](https://gitlab.com/KhaiB10/promethea) · [Codeberg](https://codeberg.org/KhaiB10/promethea) — see [docs/MIRRORS.md](docs/MIRRORS.md).
+
 ## Contact
 
 Khai · Wichita, KS · [khaibustos10@gmail.com](mailto:khaibustos10@gmail.com)
