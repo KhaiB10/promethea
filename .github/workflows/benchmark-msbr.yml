@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "MSBR mode: plot, unit_cell, homog_cell, het_vs_homog, or temp_sweep"
+        description: "MSBR mode: plot, unit_cell, homog_cell, het_vs_homog, temp_sweep, or vf_sweep"
         required: false
         default: "plot"
         type: choice
@@ -22,6 +22,16 @@ on:
           - homog_cell
           - het_vs_homog
           - temp_sweep
+          - vf_sweep
+      vf_grid:
+        description: "vf_sweep grid: coarse (3x3, default), fine (5x5), or single (smoke test)"
+        required: false
+        default: "coarse"
+        type: choice
+        options:
+          - coarse
+          - fine
+          - single
       temp_lo_K:
         description: "Low temperature in K for temp_sweep (default 900)"
         required: false
@@ -240,6 +250,28 @@ jobs:
             promethea:ci \
             python -m benchmarks.msbr.run_temp_sweep 2>&1 | tee out/msbr_temp_sweep.log
 
+      # ---- 3f. Volume-fraction sweep --------------------------------------
+      - name: Run MSBR volume-fraction sweep
+        if: ${{ steps.mode.outputs.effective == 'vf_sweep' }}
+        env:
+          PARTICLES: ${{ github.event.inputs.particles || '50000' }}
+          BATCHES: ${{ github.event.inputs.batches || '120' }}
+          XS_XML: ${{ steps.xs-paths.outputs.xs_xml }}
+          SEED: ${{ github.event.inputs.seed || '1' }}
+          VF_GRID: ${{ github.event.inputs.vf_grid || 'coarse' }}
+        run: |
+          docker run --rm \
+            -v $PWD:/workspace \
+            -e OPENMC_CROSS_SECTIONS=/workspace/$XS_XML \
+            -e PROMETHEA_PARTICLES=$PARTICLES \
+            -e PROMETHEA_BATCHES=$BATCHES \
+            -e PROMETHEA_SEED=$SEED \
+            -e PROMETHEA_VF_GRID=$VF_GRID \
+            -e HOME=/tmp \
+            -w /workspace \
+            promethea:ci \
+            python -m benchmarks.msbr.run_vf_sweep 2>&1 | tee out/msbr_vf_sweep.log
+
       # ---- 3d. Het vs homog comparison ------------------------------------
       - name: Compare het vs homog
         if: ${{ steps.mode.outputs.effective == 'het_vs_homog' }}
@@ -291,6 +323,12 @@ jobs:
               echo '```'
               tail -25 out/msbr_temp_sweep.log 2>/dev/null \
                 || echo "(no temp-sweep output — see artifact)"
+              echo '```'
+            elif [ "$MODE" = "vf_sweep" ]; then
+              echo "### Volume-fraction sweep"
+              echo '```'
+              tail -50 out/msbr_vf_sweep.log 2>/dev/null \
+                || echo "(no vf_sweep output — see artifact)"
               echo '```'
             else
               echo "### Geometry plots"
