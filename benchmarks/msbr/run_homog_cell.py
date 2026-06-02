@@ -60,6 +60,9 @@ def main() -> int:
     settings.inactive = inactive
     settings.run_mode = "eigenvalue"
     settings.verbosity = 6
+    # See run_unit_cell.py for why we interpolate; same fixed-grid
+    # S(alpha,beta) constraint applies to the homogenized mixture.
+    settings.temperature = {"method": "interpolation"}
     if seed_env:
         settings.seed = int(seed_env)
     bounds = [-1.0, -1.0, -0.5, 1.0, 1.0, 0.5]

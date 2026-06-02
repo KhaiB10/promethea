@@ -62,6 +62,11 @@ def main() -> int:
     settings.inactive = inactive
     settings.run_mode = "eigenvalue"
     settings.verbosity = 6
+    # ENDF/B-VIII.0 ships S(alpha,beta) for graphite at a fixed grid
+    # (296/400/500/600/700/800/1000/1200/1600/2000 K). The MSBR ref
+    # temperature is 900 K, between grid points, so we ask OpenMC to
+    # interpolate the thermal scattering data.
+    settings.temperature = {"method": "interpolation"}
     if seed_env:
         settings.seed = int(seed_env)
     # Box source spanning the bore (more efficient than the default)

@@ -63,6 +63,10 @@ def _run_one(work_dir: pathlib.Path, temp_K: float, *,
         settings.inactive = inactive
         settings.run_mode = "eigenvalue"
         settings.verbosity = 6
+        # Interpolate S(alpha,beta) between fixed-grid temperatures
+        # in the library; required for temperatures between the
+        # ENDF/B grid points (296/400/.../2000 K).
+        settings.temperature = {"method": "interpolation"}
         if seed is not None:
             settings.seed = seed
         bounds = [-1.0, -1.0, -0.5, 1.0, 1.0, 0.5]
