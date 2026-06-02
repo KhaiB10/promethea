@@ -169,25 +169,35 @@ def read_breeding_results(
     tally = sp.get_tally(name="msbr_breeding_rates")
 
     def _rate(nuclide: str, score: str, mat: openmc.Material) -> tuple[float, float]:
-        """Return (mean, std_dev) for (nuclide, score, material)."""
-        df = tally.get_pandas_dataframe()
-        # MaterialFilter labels rows by the material *id*, which openmc
-        # writes as 'material' in the dataframe.
-        mask = (
-            (df["material"] == mat.id)
-            & (df["nuclide"] == nuclide)
-            & (df["score"] == score)
-        )
-        row = df[mask]
-        if row.empty:
+        """Return (mean, std_dev) for (nuclide, score, material).
+
+        Bypasses ``tally.get_pandas_dataframe()`` entirely because some
+        OpenMC versions raise inside its column construction when a
+        nuclide-by-score tally has implicit extra bin dimensions. The
+        low-level ``get_values`` + ``filters`` API is stable.
+        """
+        try:
+            mean_arr = tally.get_values(
+                scores=[score],
+                nuclides=[nuclide],
+                filters=[openmc.MaterialFilter],
+                filter_bins=[(mat.id,)],
+                value="mean",
+            )
+            std_arr = tally.get_values(
+                scores=[score],
+                nuclides=[nuclide],
+                filters=[openmc.MaterialFilter],
+                filter_bins=[(mat.id,)],
+                value="std_dev",
+            )
+        except Exception:
             return 0.0, 0.0
-        m = row["mean"].iloc[0]
-        s = row["std. dev."].iloc[0]
-        # iloc[0] may be a numpy 0-d or 1-d array if the tally has
-        # additional implicit bins; coerce to scalar.
-        m_arr = np.asarray(m).reshape(-1)
-        s_arr = np.asarray(s).reshape(-1)
-        return float(m_arr[0]), float(s_arr[0])
+        m = np.asarray(mean_arr).reshape(-1)
+        s = np.asarray(std_arr).reshape(-1)
+        if m.size == 0:
+            return 0.0, 0.0
+        return float(m[0]), float(s[0])
 
     # Numerator: 232Th(n,gamma) summed over all materials that contain Th
     cap_th_total, cap_th_var = 0.0, 0.0
@@ -218,13 +228,17 @@ def read_breeding_results(
     spectrum_data: dict[str, list[float]] = {}
     try:
         spec = sp.get_tally(name="msbr_spectrum")
-        df = spec.get_pandas_dataframe()
         for mat in [fuel_salt, blanket_salt]:
             if mat is None:
                 continue
-            rows = df[df["material"] == mat.id].sort_values("energy low [eV]")
-            vals = [float(np.asarray(v).reshape(-1)[0]) for v in rows["mean"].tolist()]
-            spectrum_data[mat.name or f"material_{mat.id}"] = vals
+            vals_raw = spec.get_values(
+                scores=["flux"],
+                filters=[openmc.MaterialFilter],
+                filter_bins=[(mat.id,)],
+                value="mean",
+            )
+            vals = np.asarray(vals_raw).reshape(-1).tolist()
+            spectrum_data[mat.name or f"material_{mat.id}"] = [float(v) for v in vals]
     except Exception:
         pass
 
