@@ -157,6 +157,35 @@ def build_hastelloy_n_msbr(temp_K: float = MSBR_TEMP_K) -> openmc.Material:
     return mat
 
 
+# Aliases for downstream geometry modules (matches naming used in
+# benchmarks/msbr/geometry_lattice.py).
+build_hastelloy_n = build_hastelloy_n_msbr
+
+
+def build_blanket_region_homogenized(
+    blanket_vol_frac: float = 0.58,
+    graphite_vol_frac: float = 0.42,
+    temp_K: float = MSBR_TEMP_K,
+) -> openmc.Material:
+    """Volume-homogenized blanket annulus material.
+
+    ORNL-4528 Table 5.1, 20 kW/L reference: "Fraction salt in blanket
+    volume = 0.58" and "Fraction salt in graphite = 0.42" — i.e. the
+    blanket region is 58% blanket salt + 42% graphite by volume. We mix
+    by atom densities to avoid double-counting density.
+    """
+    blanket = build_blanket_salt(temp_K=temp_K)
+    graphite = build_graphite(temp_K=temp_K)
+    mix = openmc.Material.mix_materials(
+        [blanket, graphite],
+        [blanket_vol_frac, graphite_vol_frac],
+        "vo",
+    )
+    mix.name = "MSBR_blanket_region_homog"
+    mix.temperature = temp_K
+    return mix
+
+
 def build_all() -> openmc.Materials:
     """Return all MSBR materials as an openmc.Materials collection."""
     return openmc.Materials([
