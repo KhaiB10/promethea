@@ -65,6 +65,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ---- 0. Free disk space ---------------------------------------------
+      # GitHub-hosted ubuntu runners ship with ~14 GB of preinstalled
+      # tooling we don't need (Android, .NET, Haskell, CodeQL caches,
+      # etc.). Removing them gives Docker buildx room to write its
+      # layer cache without 'no space left on device' errors.
+      - name: Free runner disk
+        run: |
+          set -eux
+          df -h /
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc /usr/local/.ghcup || true
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo docker image prune -af || true
+          df -h /
+
       # ---- 1. Resolve and restore the XS library --------------------------
       - name: Resolve library paths
         id: xs-paths
@@ -82,8 +99,19 @@ jobs:
           echo "xs_dirname=$DIRNAME" >> "$GITHUB_OUTPUT"
           echo "xs_xml=data/xs/$DIRNAME/cross_sections.xml" >> "$GITHUB_OUTPUT"
 
+      # Auto-trigger pushes always run plot mode (no XS download, no
+      # transport). Manual dispatches honor the 'mode' input.
+      - name: Resolve effective mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "effective=plot" >> "$GITHUB_OUTPUT"
+          else
+            echo "effective=${{ github.event.inputs.mode || 'plot' }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Cache cross-section library
-        if: ${{ github.event.inputs.mode != 'plot' }}
+        if: ${{ steps.mode.outputs.effective != 'plot' }}
         id: xs-cache
         uses: actions/cache@v4
         with:
@@ -91,7 +119,7 @@ jobs:
           key: ${{ steps.xs-paths.outputs.xs_dirname }}-v1
 
       - name: Fetch cross-sections (if cache miss and mode != plot)
-        if: ${{ github.event.inputs.mode != 'plot' && steps.xs-cache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.mode.outputs.effective != 'plot' && steps.xs-cache.outputs.cache-hit != 'true' }}
         run: bash scripts/fetch_xs.sh ${{ steps.xs-paths.outputs.xs_lib }}
 
       - name: Prepare working directories
@@ -115,7 +143,7 @@ jobs:
 
       # ---- 3a. Plot mode --------------------------------------------------
       - name: Generate MSBR geometry plots
-        if: ${{ github.event.inputs.mode == 'plot' || github.event_name == 'push' }}
+        if: ${{ steps.mode.outputs.effective == 'plot' }}
         run: |
           docker run --rm \
             -v $PWD:/workspace \
@@ -127,7 +155,7 @@ jobs:
 
       # ---- 3b. Unit-cell k_inf --------------------------------------------
       - name: Run MSBR unit-cell k_inf
-        if: ${{ github.event.inputs.mode == 'unit_cell' && github.event_name != 'push' }}
+        if: ${{ steps.mode.outputs.effective == 'unit_cell' }}
         env:
           PARTICLES: ${{ github.event.inputs.particles || '20000' }}
           BATCHES: ${{ github.event.inputs.batches || '60' }}
@@ -157,11 +185,11 @@ jobs:
             echo "## MSBR v0.4.0 first-light"
             echo ""
             echo "**Commit:** \`${GITHUB_SHA:0:7}\`"
-            echo "**Mode:** ${{ github.event.inputs.mode || 'plot' }}"
+            echo "**Mode (effective):** ${{ steps.mode.outputs.effective }}"
             echo "**Cross-section library:** \`${{ github.event.inputs.xs_library || 'endfb-viii.0' }}\`"
             echo "**Seed:** \`${{ github.event.inputs.seed || '(default)' }}\`"
             echo ""
-            if [ "${{ github.event.inputs.mode }}" = "unit_cell" ]; then
+            if [ "${{ steps.mode.outputs.effective }}" = "unit_cell" ]; then
               echo "### k_inf"
               echo '```'
               grep -E "(k-eff|k-effective|combined)" out/msbr_run.log | tail -20 \
