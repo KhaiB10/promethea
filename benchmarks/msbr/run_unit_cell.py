@@ -32,6 +32,11 @@ import sys
 import openmc
 
 from .geometry_unit_cell import build_unit_cell_geometry
+from .tallies import (
+    build_breeding_tallies,
+    read_breeding_results,
+    format_summary,
+)
 
 
 def main() -> int:
@@ -65,11 +70,39 @@ def main() -> int:
         space=openmc.stats.Box(bounds[:3], bounds[3:], only_fissionable=True)
     )
 
+    # Breeding-ratio tallies (232Th(n,g) / 233U absorption).
+    # Lookup by name prefix so we don't break if the material naming
+    # convention is tweaked (currently 'MSBR_fuel_salt' etc.).
+    def _find(prefix):
+        return next((m for m in materials if m.name and prefix in m.name), None)
+    fuel_salt = _find("fuel_salt")
+    blanket_salt = _find("blanket_salt")
+    if fuel_salt is None:
+        raise RuntimeError("could not locate fuel salt material for BR tallies")
+    tallies = build_breeding_tallies(fuel_salt=fuel_salt, blanket_salt=blanket_salt)
+
     materials.export_to_xml()
     geometry.export_to_xml()
     settings.export_to_xml()
+    tallies.export_to_xml()
 
     openmc.run()
+
+    # Post-process: locate statepoint, extract BR, write a sidecar file.
+    sp_paths = sorted(work.glob("statepoint.*.h5"))
+    if sp_paths:
+        sp_path = str(sp_paths[-1])
+        try:
+            results = read_breeding_results(
+                sp_path, fuel_salt=fuel_salt, blanket_salt=blanket_salt,
+            )
+            summary = format_summary(results)
+            print(summary)
+            out_dir = work.parent.parent.parent / "out"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / "msbr_breeding.txt").write_text(summary + "\n")
+        except Exception as exc:  # noqa: BLE001
+            print(f"[msbr] BR extraction failed: {exc}")
     return 0
 
 
