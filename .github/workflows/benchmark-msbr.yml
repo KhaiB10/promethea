@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "MSBR mode: plot, unit_cell, homog_cell, het_vs_homog, temp_sweep, or vf_sweep"
+        description: "MSBR mode: plot, unit_cell, homog_cell, het_vs_homog, temp_sweep, vf_sweep, or spectrum"
         required: false
         default: "plot"
         type: choice
@@ -23,6 +23,7 @@ on:
           - het_vs_homog
           - temp_sweep
           - vf_sweep
+          - spectrum
       vf_grid:
         description: "vf_sweep grid: coarse (3x3, default), fine (5x5), or single (smoke test)"
         required: false
@@ -272,6 +273,26 @@ jobs:
             promethea:ci \
             python -m benchmarks.msbr.run_vf_sweep 2>&1 | tee out/msbr_vf_sweep.log
 
+      # ---- 3g. Spectral decomposition -------------------------------------
+      - name: Run MSBR spectral decomposition
+        if: ${{ steps.mode.outputs.effective == 'spectrum' }}
+        env:
+          PARTICLES: ${{ github.event.inputs.particles || '50000' }}
+          BATCHES: ${{ github.event.inputs.batches || '120' }}
+          XS_XML: ${{ steps.xs-paths.outputs.xs_xml }}
+          SEED: ${{ github.event.inputs.seed || '1' }}
+        run: |
+          docker run --rm \
+            -v $PWD:/workspace \
+            -e OPENMC_CROSS_SECTIONS=/workspace/$XS_XML \
+            -e PROMETHEA_PARTICLES=$PARTICLES \
+            -e PROMETHEA_BATCHES=$BATCHES \
+            -e PROMETHEA_SEED=$SEED \
+            -e HOME=/tmp \
+            -w /workspace \
+            promethea:ci \
+            python -m benchmarks.msbr.run_spectrum 2>&1 | tee out/msbr_spectrum.log
+
       # ---- 3d. Het vs homog comparison ------------------------------------
       - name: Compare het vs homog
         if: ${{ steps.mode.outputs.effective == 'het_vs_homog' }}
@@ -329,6 +350,12 @@ jobs:
               echo '```'
               tail -50 out/msbr_vf_sweep.log 2>/dev/null \
                 || echo "(no vf_sweep output — see artifact)"
+              echo '```'
+            elif [ "$MODE" = "spectrum" ]; then
+              echo "### Spectral decomposition"
+              echo '```'
+              tail -60 out/msbr_spectrum.log 2>/dev/null \
+                || echo "(no spectrum output — see artifact)"
               echo '```'
             else
               echo "### Geometry plots"
