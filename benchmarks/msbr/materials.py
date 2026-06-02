@@ -138,7 +138,10 @@ def build_graphite(temp_K: float = MSBR_TEMP_K) -> openmc.Material:
     mat.temperature = temp_K
     mat.set_density("g/cm3", GRAPHITE_DENSITY_G_CC)
     # Add S(alpha,beta) treatment.
-    mat.add_nuclide("C0", 1.0)
+    # ENDF/B-VIII.0 does not ship an elemental "C0" nuclide; carbon is
+    # represented by C12 + C13 at natural abundance. add_element expands
+    # to the correct nuclide mix automatically.
+    mat.add_element("C", 1.0)
     mat.add_s_alpha_beta("c_Graphite")
     return mat
 
