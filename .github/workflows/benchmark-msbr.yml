@@ -12,13 +12,15 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "MSBR mode: 'plot' for geometry PNGs only, 'unit_cell' for k_inf"
+        description: "MSBR mode: plot, unit_cell (het), homog_cell, or het_vs_homog (both + Delta_k)"
         required: false
         default: "plot"
         type: choice
         options:
           - plot
           - unit_cell
+          - homog_cell
+          - het_vs_homog
       particles:
         description: "Particles per batch (default 20000)"
         required: false
@@ -153,9 +155,9 @@ jobs:
             python -m benchmarks.msbr.plot_geometry 2>&1 | tee out/msbr_plot.log
           ls -lh out/plots/msbr/ || true
 
-      # ---- 3b. Unit-cell k_inf --------------------------------------------
-      - name: Run MSBR unit-cell k_inf
-        if: ${{ steps.mode.outputs.effective == 'unit_cell' }}
+      # ---- 3b. Heterogeneous unit-cell k_inf ------------------------------
+      - name: Run MSBR unit-cell k_inf (heterogeneous)
+        if: ${{ steps.mode.outputs.effective == 'unit_cell' || steps.mode.outputs.effective == 'het_vs_homog' }}
         env:
           PARTICLES: ${{ github.event.inputs.particles || '20000' }}
           BATCHES: ${{ github.event.inputs.batches || '60' }}
@@ -177,6 +179,45 @@ jobs:
             promethea:ci \
             python -m benchmarks.msbr.run_unit_cell 2>&1 | tee out/msbr_run.log
 
+      # ---- 3c. Homogenized unit-cell k_inf --------------------------------
+      - name: Run MSBR homogenized-cell k_inf
+        if: ${{ steps.mode.outputs.effective == 'homog_cell' || steps.mode.outputs.effective == 'het_vs_homog' }}
+        env:
+          PARTICLES: ${{ github.event.inputs.particles || '20000' }}
+          BATCHES: ${{ github.event.inputs.batches || '60' }}
+          XS_XML: ${{ steps.xs-paths.outputs.xs_xml }}
+          SEED: ${{ github.event.inputs.seed || '' }}
+        run: |
+          SEED_ENV=()
+          if [ -n "$SEED" ]; then
+            SEED_ENV=(-e PROMETHEA_SEED="$SEED")
+          fi
+          docker run --rm \
+            -v $PWD:/workspace \
+            -e OPENMC_CROSS_SECTIONS=/workspace/$XS_XML \
+            -e PROMETHEA_PARTICLES=$PARTICLES \
+            -e PROMETHEA_BATCHES=$BATCHES \
+            "${SEED_ENV[@]}" \
+            -e HOME=/tmp \
+            -w /workspace \
+            promethea:ci \
+            python -m benchmarks.msbr.run_homog_cell 2>&1 | tee out/msbr_homog_run.log
+
+      # ---- 3d. Het vs homog comparison ------------------------------------
+      - name: Compare het vs homog
+        if: ${{ steps.mode.outputs.effective == 'het_vs_homog' }}
+        run: |
+          HET_SP=$(ls sims/openmc/msbr_unit_cell/statepoint.*.h5 | tail -1)
+          HOMOG_SP=$(ls sims/openmc/msbr_homog_cell/statepoint.*.h5 | tail -1)
+          docker run --rm \
+            -v $PWD:/workspace \
+            -e HOME=/tmp \
+            -w /workspace \
+            promethea:ci \
+            python scripts/analysis/het_vs_homog.py \
+              --het "$HET_SP" --homog "$HOMOG_SP" \
+              --out out/het_vs_homog.json 2>&1 | tee out/het_vs_homog.log
+
       # ---- 4. Surface results ---------------------------------------------
       - name: Write summary
         if: always()
@@ -189,11 +230,24 @@ jobs:
             echo "**Cross-section library:** \`${{ github.event.inputs.xs_library || 'endfb-viii.0' }}\`"
             echo "**Seed:** \`${{ github.event.inputs.seed || '(default)' }}\`"
             echo ""
-            if [ "${{ steps.mode.outputs.effective }}" = "unit_cell" ]; then
-              echo "### k_inf"
+            MODE="${{ steps.mode.outputs.effective }}"
+            if [ "$MODE" = "unit_cell" ]; then
+              echo "### k_inf (heterogeneous)"
               echo '```'
               grep -E "(k-eff|k-effective|combined)" out/msbr_run.log | tail -20 \
                 || echo "(no k-eff lines — see artifact)"
+              echo '```'
+            elif [ "$MODE" = "homog_cell" ]; then
+              echo "### k_inf (homogenized)"
+              echo '```'
+              grep -E "(k-eff|k-effective|combined)" out/msbr_homog_run.log | tail -20 \
+                || echo "(no k-eff lines — see artifact)"
+              echo '```'
+            elif [ "$MODE" = "het_vs_homog" ]; then
+              echo "### Heterogeneity study"
+              echo '```'
+              cat out/het_vs_homog.log 2>/dev/null \
+                || echo "(no comparison output — see artifact)"
               echo '```'
             else
               echo "### Geometry plots"
