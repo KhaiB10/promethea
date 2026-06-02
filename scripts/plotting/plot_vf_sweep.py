@@ -51,32 +51,48 @@ def main() -> int:
 
     best = max(rows, key=lambda r: r["delta_pcm"])
 
+    # Build edge arrays for pcolormesh so each value sits at a true cell center.
+    def cell_edges(vals):
+        e = [vals[0] - (vals[1] - vals[0]) / 2]
+        for i in range(len(vals) - 1):
+            e.append((vals[i] + vals[i + 1]) / 2)
+        e.append(vals[-1] + (vals[-1] - vals[-2]) / 2)
+        return np.array(e)
+    fuel_edges = cell_edges(f_fuel_vals)
+    blank_edges = cell_edges(f_blank_vals)
+
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
     fig, axes = plt.subplots(1, 2, figsize=(13, 5.2), constrained_layout=True)
 
     # Panel 1: Δk heatmap
     ax = axes[0]
-    im = ax.imshow(
-        Z, origin="lower", aspect="auto",
-        extent=[
-            min(f_fuel_vals) - 0.005, max(f_fuel_vals) + 0.005,
-            min(f_blank_vals) - 0.005, max(f_blank_vals) + 0.005,
-        ],
-        cmap="viridis",
+    im = ax.pcolormesh(
+        fuel_edges, blank_edges, Z,
+        cmap="viridis", shading="flat",
     )
-    # annotate each cell
+    # text at cell center, with row-dependent offset for highlighted cells so markers don't overlap
     for r in rows:
+        is_best = abs(r["f_fuel"]-best["f_fuel"])<1e-6 and abs(r["f_blanket"]-best["f_blanket"])<1e-6
+        is_ornl = abs(r["f_fuel"]-ORNL_FUEL)<1e-6 and abs(r["f_blanket"]-ORNL_BLANKET)<1e-6
+        # cell half-height in blanket axis
+        i = f_blank_vals.index(r["f_blanket"])
+        cell_h = blank_edges[i + 1] - blank_edges[i]
+        dy = +cell_h * 0.20 if (is_best or is_ornl) else 0.0
         ax.text(
-            r["f_fuel"], r["f_blanket"],
+            r["f_fuel"], r["f_blanket"] + dy,
             f"{int(r['delta_pcm']):+d}\n±{int(r['sigma_pcm'])}",
             ha="center", va="center", fontsize=8.5, color="white",
             fontweight="bold",
         )
-    # ORNL marker
-    ax.plot(ORNL_FUEL, ORNL_BLANKET, marker="o", markersize=14,
+    # markers placed below text inside their cell
+    ornl_i = f_blank_vals.index(ORNL_BLANKET)
+    ornl_dy = -0.25 * (blank_edges[ornl_i + 1] - blank_edges[ornl_i])
+    best_i = f_blank_vals.index(best["f_blanket"])
+    best_dy = -0.25 * (blank_edges[best_i + 1] - blank_edges[best_i])
+    ax.plot(ORNL_FUEL, ORNL_BLANKET + ornl_dy, marker="o", markersize=10,
             mfc="none", mec="red", mew=2.2, label="ORNL-1971 baseline")
-    ax.plot(best["f_fuel"], best["f_blanket"], marker="*", markersize=18,
+    ax.plot(best["f_fuel"], best["f_blanket"] + best_dy, marker="*", markersize=14,
             mfc="gold", mec="black", mew=1.0, label="Δk max")
     ax.set_xlabel("fuel salt fraction")
     ax.set_ylabel("blanket salt fraction")
@@ -88,24 +104,24 @@ def main() -> int:
 
     # Panel 2: k_het heatmap (for context — criticality landscape)
     ax = axes[1]
-    im2 = ax.imshow(
-        Khet, origin="lower", aspect="auto",
-        extent=[
-            min(f_fuel_vals) - 0.005, max(f_fuel_vals) + 0.005,
-            min(f_blank_vals) - 0.005, max(f_blank_vals) + 0.005,
-        ],
-        cmap="plasma", vmin=0.6, vmax=1.6,
+    im2 = ax.pcolormesh(
+        fuel_edges, blank_edges, Khet,
+        cmap="plasma", vmin=0.6, vmax=1.6, shading="flat",
     )
     for r in rows:
+        is_best = abs(r["f_fuel"]-best["f_fuel"])<1e-6 and abs(r["f_blanket"]-best["f_blanket"])<1e-6
+        is_ornl = abs(r["f_fuel"]-ORNL_FUEL)<1e-6 and abs(r["f_blanket"]-ORNL_BLANKET)<1e-6
+        i = f_blank_vals.index(r["f_blanket"])
+        cell_h = blank_edges[i + 1] - blank_edges[i]
+        dy = +cell_h * 0.20 if (is_best or is_ornl) else 0.0
         ax.text(
-            r["f_fuel"], r["f_blanket"], f"{r['k_het']:.3f}",
+            r["f_fuel"], r["f_blanket"] + dy, f"{r['k_het']:.3f}",
             ha="center", va="center", fontsize=9, color="white",
             fontweight="bold",
         )
-    # mark k=1 contour with simple per-row interpolation when feasible
-    ax.plot(ORNL_FUEL, ORNL_BLANKET, marker="o", markersize=14,
+    ax.plot(ORNL_FUEL, ORNL_BLANKET + ornl_dy, marker="o", markersize=10,
             mfc="none", mec="cyan", mew=2.2, label="ORNL-1971 baseline")
-    ax.plot(best["f_fuel"], best["f_blanket"], marker="*", markersize=18,
+    ax.plot(best["f_fuel"], best["f_blanket"] + best_dy, marker="*", markersize=14,
             mfc="gold", mec="black", mew=1.0, label="Δk max")
     ax.set_xlabel("fuel salt fraction")
     ax.set_ylabel("blanket salt fraction")
