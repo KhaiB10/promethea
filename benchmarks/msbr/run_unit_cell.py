@@ -107,7 +107,9 @@ def main() -> int:
             out_dir.mkdir(parents=True, exist_ok=True)
             (out_dir / "msbr_breeding.txt").write_text(summary + "\n")
         except Exception as exc:  # noqa: BLE001
+            import traceback
             print(f"[msbr] BR extraction failed: {exc}")
+            traceback.print_exc()
     return 0
 
 

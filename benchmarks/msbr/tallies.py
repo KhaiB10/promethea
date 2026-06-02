@@ -181,7 +181,13 @@ def read_breeding_results(
         row = df[mask]
         if row.empty:
             return 0.0, 0.0
-        return float(row["mean"].iloc[0]), float(row["std. dev."].iloc[0])
+        m = row["mean"].iloc[0]
+        s = row["std. dev."].iloc[0]
+        # iloc[0] may be a numpy 0-d or 1-d array if the tally has
+        # additional implicit bins; coerce to scalar.
+        m_arr = np.asarray(m).reshape(-1)
+        s_arr = np.asarray(s).reshape(-1)
+        return float(m_arr[0]), float(s_arr[0])
 
     # Numerator: 232Th(n,gamma) summed over all materials that contain Th
     cap_th_total, cap_th_var = 0.0, 0.0
@@ -217,7 +223,8 @@ def read_breeding_results(
             if mat is None:
                 continue
             rows = df[df["material"] == mat.id].sort_values("energy low [eV]")
-            spectrum_data[mat.name or f"material_{mat.id}"] = rows["mean"].tolist()
+            vals = [float(np.asarray(v).reshape(-1)[0]) for v in rows["mean"].tolist()]
+            spectrum_data[mat.name or f"material_{mat.id}"] = vals
     except Exception:
         pass
 
