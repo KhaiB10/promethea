@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "MSBR mode: plot, unit_cell, homog_cell, het_vs_homog, temp_sweep, vf_sweep, or spectrum"
+        description: "MSBR mode: plot, unit_cell, homog_cell, het_vs_homog, temp_sweep, vf_sweep, spectrum, or mg_verify"
         required: false
         default: "plot"
         type: choice
@@ -24,6 +24,7 @@ on:
           - temp_sweep
           - vf_sweep
           - spectrum
+          - mg_verify
       vf_grid:
         description: "vf_sweep grid: coarse (3x3), fine (5x5), single (ORNL smoke), or corner (Δk-max reproduction)"
         required: false
@@ -293,6 +294,26 @@ jobs:
             -w /workspace \
             promethea:ci \
             python -m benchmarks.msbr.run_spectrum 2>&1 | tee out/msbr_spectrum.log
+
+      # ---- 3h. MG self-verification (CE -> MGXS -> MG transport) ---------
+      - name: Run MSBR MG self-verification
+        if: ${{ steps.mode.outputs.effective == 'mg_verify' }}
+        env:
+          PARTICLES: ${{ github.event.inputs.particles || '50000' }}
+          BATCHES: ${{ github.event.inputs.batches || '120' }}
+          XS_XML: ${{ steps.xs-paths.outputs.xs_xml }}
+          SEED: ${{ github.event.inputs.seed || '1' }}
+        run: |
+          docker run --rm \
+            -v $PWD:/workspace \
+            -e OPENMC_CROSS_SECTIONS=/workspace/$XS_XML \
+            -e PROMETHEA_PARTICLES=$PARTICLES \
+            -e PROMETHEA_BATCHES=$BATCHES \
+            -e PROMETHEA_SEED=$SEED \
+            -e HOME=/tmp \
+            -w /workspace \
+            promethea:ci \
+            python -m benchmarks.msbr.run_mg_verify 2>&1 | tee out/msbr_mg_verify.log
 
       # ---- 3d. Het vs homog comparison ------------------------------------
       - name: Compare het vs homog
