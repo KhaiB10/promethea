@@ -358,6 +358,12 @@ jobs:
               tail -60 out/msbr_spectrum.log 2>/dev/null \
                 || echo "(no spectrum output — see artifact)"
               echo '```'
+            elif [ "$MODE" = "mg_verify" ]; then
+              echo "### MG self-verification (CE vs MG)"
+              echo '```'
+              tail -30 out/msbr_mg_verify.log 2>/dev/null \
+                || echo "(no mg_verify output — see artifact)"
+              echo '```'
             else
               echo "### Geometry plots"
               ls out/plots/msbr/ 2>/dev/null | sed 's/^/- /' || echo "(no plots)"
