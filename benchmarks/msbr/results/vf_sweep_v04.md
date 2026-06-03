@@ -115,6 +115,24 @@ two-group methods and did not perform a Monte-Carlo unit-cell
 sweep at all. SINAP's TMSR-LF1 has not published comparable
 numerical sweeps.
 
+## Δk-max corner reproduction (seed=2)
+
+CI run: [26827238443](https://github.com/KhaiB10/promethea/actions/runs/26827238443)
+(corner grid, 50,000 × 120, seed=2, ENDF/B-VIII.0, 11.6 min)
+
+| seed | k_het | k_homog | Δk (pcm) |
+|---|---|---|---|
+| 1 | 1.02200 ± 0.00045 | 0.88318 ± 0.00042 | +13,882 ± 61 |
+| 2 | 1.02069 ± 0.00039 | 0.88357 ± 0.00042 | +13,712 ± 58 |
+| **pooled** | — | — | **+13,793 ± 42** |
+
+Seed-to-seed difference: +170 ± 84 pcm (z = +2.0σ, within MC variation).
+Pooled corner Δk = +13,793 ± 42 pcm.
+Pooled corner − ORNL pooled (+10,506 ± 18) = **+3,287 ± 46 pcm (z = +71.9σ)**.
+
+The Δk-max corner is reproduced across two independent seeds; the
++3,287 pcm offset from the ORNL baseline is not single-seed luck.
+
 ## Caveat — China context
 
 China's TMSR-LF1 (Wuwei, 2 MWth, full power June 2024; first
