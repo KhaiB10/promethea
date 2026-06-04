@@ -107,7 +107,7 @@ def _run_ce_with_mgxs(work_ce, particles, batches, inactive, seed_env):
     mgxs_lib.energy_groups = GROUPS
     mgxs_lib.mgxs_types = [
         "total", "absorption", "nu-fission", "fission",
-        "scatter matrix", "chi", "nu-scatter matrix",
+        "nu-scatter matrix", "multiplicity matrix", "chi",
     ]
     mgxs_lib.domain_type = "material"
     mgxs_lib.domains = materials
@@ -138,11 +138,18 @@ def _run_ce_with_mgxs(work_ce, particles, batches, inactive, seed_env):
 
 
 def _build_mg_library(mgxs_lib, materials, mg_h5_path):
-    """Step 2: extract MGXSLibrary from the CE tallies."""
-    mg_library = mgxs_lib.create_mg_library(xs_type="macro", xsdata_names=None)
+    """Step 2: extract MGXSLibrary from the CE tallies.
+
+    xsdata_names MUST be passed explicitly; otherwise create_mg_library
+    falls back to 'set1', 'set2', … and the MG materials cannot find
+    macroscopic data by material name.
+    """
+    names = [m.name for m in materials]
+    mg_library = mgxs_lib.create_mg_library(xs_type="macro", xsdata_names=names)
     mg_library.export_to_hdf5(str(mg_h5_path))
     print(f"[mg_verify] MG library written: {mg_h5_path}")
-    return mg_library, [m.name for m in materials]
+    print(f"[mg_verify] xsdata names      : {names}")
+    return mg_library, names
 
 
 def _run_mg(work_mg, mg_h5_path, mat_names, particles, batches,
