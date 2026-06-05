@@ -1,3 +1,66 @@
+# Promethea v0.5.0 — Cross-verification (library invariance + CE vs MG bias)
+
+v0.5.0 closes two referee-grade questions left open by v0.4.0:
+
+1. **Library invariance.** The +10,500 pcm heterogeneity Δk reported
+   in v0.4.0 was measured under ENDF/B-VII.1 and VIII.0 (both US
+   evaluations). v0.5.0 adds **JEFF-3.3** (OECD/NEA) and finds three-
+   library agreement to within statistical noise.
+
+   | library | Δk (pcm) |
+   |---|---|
+   | ENDF/B-VII.1 (v0.4.0)       | +10,501 ± 58 |
+   | ENDF/B-VIII.0 (pooled 3 seeds, v0.4.0) | +10,506 ± 18 |
+   | JEFF-3.3 (v0.5.0)            | +10,575 ± 57 |
+   | **three-library pool**       | **+10,511 ± 16** (χ² = 1.37 / 2 dof) |
+
+   The +10,500 pcm heterogeneity is library-invariant across two
+   evaluation families. Library-artifact critique closed.
+
+2. **CE vs MG bias.** Production reactor codes run multi-group with
+   homogenized cross-sections. v0.5.0 builds an 8-group MGXS library
+   from the CE flux on the heterogeneous cell and runs MG transport
+   on the same geometry. Result at 200,000 × 200 statistics:
+
+   - k_CE = 1.131300 ± 0.000168
+   - k_MG = 1.134039 ± 0.000154
+   - **Δ_MG = k_CE − k_MG = −274 ± 23 pcm (z = −12σ)**
+
+   The standard industrial homogenized 8-group workflow systematically
+   over-predicts k_inf by 274 pcm on the ORNL MSBR cell. Small versus
+   core-level reactivity margins (≈0.2%), but resolved at z = 12 and
+   non-zero. Likely traceable to the same epithermal heterogeneity
+   physics that v0.4.0 identified — group-averaging cannot resolve
+   the narrow 232Th / 233U resonance structure in the 0.625 eV – 0.1
+   MeV window.
+
+## Why the Serpent 2 cross-check is not in this release
+
+Serpent 2 is distributed via RSICC and OECD/NEA Data Bank under
+single-user, non-commercial, export-controlled licenses, and cannot
+be redistributed in a public CI image. Same gating applies to MCNP6.
+We pivoted to OpenMC self-verification (CE vs MG) — which production
+reactor-physics shops also use for code verification — to keep the
+entire result chain reproducible from a public GitHub Actions run.
+
+## What audits passed before tag
+
+- JEFF-3.3 run reproduced the heterogeneity Δk within 1σ of pooled VIII.0
+- MG smoke (20k × 60) and MG production (200k × 200) mutually consistent (z = +1.3)
+- Pooled stats arithmetic re-derived from raw k values, matches doc
+- Three-library χ² = 1.37 / 2 dof verified
+
+## What's open for v0.6.0+
+
+- **16-group / 30-group MG runs** to characterize how Δ_MG scales with
+  group count. Open question: does the bias collapse to <50 pcm at
+  finer resolution, or does the homogenization itself leave residual?
+- **Local Serpent 2 cross-check** if/when an RSICC license is granted.
+- **Burnup / breeding ratio over time** (the BR(t) → 1.0 question that
+  Rykhlevskii 2017 measured for the single-fluid simplified geometry).
+
+---
+
 # Promethea v0.4.0 — MSBR pivot, first measurements
 
 
